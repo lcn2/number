@@ -80,11 +80,12 @@ my $warn = $^W;
 
 # We setup this arbitrary limit so that people to not enter
 # very large numbers and drive that server crazy.  The algoritm
-# used has no limit so we pick 2500 digits as a arbitrary limit.
+# used has no limit so we pick an arbitrary limit.
+#
 # This digit count is not exact, but serves as a limiter on
 # the length of input as well as the exponent allowed in E notation.
 #
-my $too_big = "2500";   # too many digits for the web
+my $too_big = "5000";   # too many digits for the web
 
 # To help pronounce values we put $dash between word parts
 #
@@ -115,6 +116,7 @@ my @twenty = qw(ten eleven twelve thirteen fourteen
 # CGI / HTML variables
 #
 my $html = 0;		# 1 => be are being invoked as a CGI script
+my $cgi = 0;		# CGI object, if invoked as a CGI script
 
 # usage and help
 #
@@ -167,7 +169,6 @@ MAIN:
     my $visit;		# visit counter or error message
     my $num;		# input value
     my $neg;		# 1 => number if < 0
-    my $q;		# CGI object, if invoked as a CGI script
 
     # setup
     #
@@ -176,7 +177,6 @@ MAIN:
 
     # determine if we are CGI based
     #
-    $q = 0;
     if ($0 =~ /\.cgi$/) {
 
 	# we are a CGI script, web restictions apply
@@ -184,17 +184,17 @@ MAIN:
 
 	# CGI setup
 	#
-	$q = new CGI;
-	$q->use_named_parameters(1);
+	$cgi = new CGI;
+	if (cgi_error()) {
 	    print "Content-type: text/plain\n\n";
 	    print "Your browser sent bad or too much data!\n";
 	    print "Error: ", cgi_error(), "\n";
-	$num = &cgi_form($q);
+	$num = &cgi_form();
 	}
 	if (! defined $num) {
 	    print $cgi->p, "\n";
     } elsif (!getopts('pLdmcleh')) {
-	die "usage: $0 $usage\n";
+	&error("usage: $0 $usage\n");
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
     #	    on the command line.
@@ -209,10 +209,10 @@ MAIN:
     if ($opt_h) {
     if (defined($opt_c) && (defined($opt_L) || defined($opt_p))) {
 	exit(0);
-	    &error($q, "-c conflicts with -L and -p");
+	    &error("-c conflicts with -L and -p");
 
-	    &error($q, "You may only print decimal digits when the input is " .
-		   "just a number.\n");
+	    &error("You may only print decimal digits when the input is " .
+	        "just a number.\n");
     if ($opt_c && ($opt_l || $opt_p)) {
 	if ($html == 0) {
 	    err("-c conflicts with either -l and/or -p");
@@ -274,8 +274,11 @@ MAIN:
 	    $num = "0";
 	} else {
 	    # strip off leading 0's
+    if ($html == 1 && length($num) >= $too_big) {
+	&big_error();
+    }
 	    $num =~ s/^0+//;
-	die "$0: numbers may have only one decimal $point\n";
+	&error("Numbers may have only one decimal $point.\n");
     }
 
     # firewall
@@ -286,14 +289,15 @@ MAIN:
     if ($num =~ /^$/) {
 	$num = "0";
     }
-	    die "$0: scientific numbers may only have a leading -, digits\n" .
+	    &error(
+    # If scientific (e or E notation), verify format
     # and convert it into a long decimal value.
     #
     if ($num =~ /[eE]/) {
-		"$sep's, leading 0's and whitespace characters are ignored.\n";
+		"$sep's, leading 0's and whitespace characters are ignored.\n");
 	        "Scientific numbers may only have a leading -, digits\n" .
 		"an optional decimal $point (optionally followed by digits)\n" .
-	    die "$0: scientific numbers must at least a digit before the e\n";
+	    &error("Scientific numbers must at least a digit before the e.\n");
 		"optional - and 1 more more digits after the e.  All\n" .
 	$num = &exp_number($num, $point);
 	$num = exp_number($num, $point, \$bias);
@@ -301,9 +305,9 @@ MAIN:
     # We did not have a number in scientific notation so we have no bias
     #
     } else {
-	die "$0: A number may only have a leading -, digits and an " .
-	    "optional decimal $point.  All $sep's and whitespace\n" .
-	    "characters and leading 0's are ignored\n";
+	&error("A number may only have a leading -, digits and an " .
+	       "optional decimal $point.  All $sep's and whitespace\n" .
+	       "characters and leading 0's are ignored.\n");
     #
     if ($num !~ /^[\d\Q$point\E]+$/o || $num =~ /^\Q$point\E$/) {
 	err("A number may only have a leading -, digits and an " .
@@ -317,7 +321,7 @@ MAIN:
     }
 
     # catch the case where we only want to enter a power of 10
-	    die "$0: The power of 10 must be a non-negative integer.\n";
+	    &error("The power must be a non-negative integer.\n");
     if ($opt_p || $opt_l) {
 
        # only allow powers of 10 that are non-negative integers
@@ -354,7 +358,7 @@ MAIN:
     }
 
     # all done
-# usage:
+#
 #	.123456		with a bias of -5
 #
 # This function will not adjust the decimal point/comma to beyond
@@ -386,6 +390,12 @@ sub exp_number($$$)
     #
     ($int, $frac) = split(/\Q$point\E/, $lead);
     $frac = "" if !defined($frac);
+
+	# limit the size of the input in a arbitrary way when in CGI/HTML mode
+	#
+	if ($html == 1 && $exp >= $too_big) {
+	    &big_error();
+	}
 
     # If we need to move the decimal point/comma to the right, then
 	# tack the $frac onto the end of the $int part.  We
@@ -420,6 +430,12 @@ sub exp_number($$$)
 	# switch the negative exp to mean shift left count
 	#
 	$exp = -$exp;
+
+	# limit the size of the input in a arbitrary way when in CGI/HTML mode
+	#
+	if ($html == 1 && $exp >= $too_big) {
+	    &big_error();
+	}
 
     # If we need to move the decimal point/comma to the left, then
     # we do so by moving digits from the end of $int onto the front
@@ -460,7 +476,7 @@ sub exp_number($$$)
 	return $int . $point . $frac;
     } else {
 	return $int;
-# usage:
+    }
 }
 
 
@@ -606,7 +622,7 @@ sub print_number($$\$$\$$)
     }
 
     # end of the number
-# usage:
+    print "\n";
 #	$num	number to construct
 
 # latin_root - return the Latin root of a number
@@ -726,7 +742,7 @@ sub latin_root($$)
 
     # all done
     #
-# usage:
+    return;
 #	$power		power of 1000
 
 # Prints the name of 1000^$power.
@@ -738,7 +754,8 @@ sub american_kilo($)
 #
 sub american_kilo($)
     if ($power < 0 || $power != int($power)) {
-	die "negative and fractional powers of 1000 not supported: $power\n";
+	&error(
+	    "Negative and fractional powers of 1000 not supported: $power\n");
     }
 
     # firewall
@@ -762,7 +779,7 @@ sub american_kilo($)
 	$big = Math::BigInt->new($power);
 	latin_root($big-1, $zero);
 	print "llion";
-# usage:
+    }
 #	$power		power of 1000
 
 # Prints the name of 1000^$power.
@@ -781,7 +798,8 @@ sub european_kilo($)
 sub european_kilo($)
 {
     if ($power < 0 || $power != int($power)) {
-	die "negative and fractional powers of 1000 not supported: $power\n";
+	&error(
+	    "Negative and fractional powers of 1000 not supported: $power\n");
     }
 
     # firewall
@@ -811,7 +829,7 @@ sub european_kilo($)
 	    latin_root($big, $zero);
 	    print "lliard";
 	}
-# usage:
+    }
 }
 
 # power_of_ten - just print name of a the power of 10
@@ -916,7 +934,7 @@ sub power_of_ten($$$)
 	    print "lliard";
 	}
     }
-# usage:
+    print "\n";
 }
 #	\$integer	intger part of the number
 
@@ -1017,7 +1035,7 @@ sub print_name($$$$$)
 	    }
 	}
     }
-# usage:
+    print "\n";
 }
 
 
@@ -1034,7 +1052,7 @@ sub print_3($)
     my $num;		# working value of number
     my $name_3;		# 3 digit name
 
-	die "print_3 called with arg not in [0,999] range: $number\n"
+	&error("print_3 called with arg not in [0,999] range: $number\n")
     #
     if (! defined($english_3[$number])) {
 
@@ -1084,16 +1102,13 @@ sub print_3($)
 	$english_3[$number] = $name_3;
     }
 
-# cgi_form - print the CGI HTML form
+    # print the 3 digit name
     #
-# usage:
-#	$q	CGI object
-#	\$num	input value
+    print $english_3[$number];
+}
 
-sub cgi_form($\$)
+sub cgi_form(\$)
 # cgi_form - print the CGI/HTML form
-    my ($q, $num) = @_;		# CGI object
-
 #
 # returns:
 #	$num	input value
@@ -1111,69 +1126,67 @@ sub cgi_form()
 	"name" => " English name",
 	"digit" => " Decimal digits if input is just a number"
     );
-	"power" => " millia^7"
+    my %system_label = (
 	"usa" => " American system",
 	"europe" => " European system"
     );
     my %millia_label = (
 	"dup" => " milliamillia...",
 	"power" => " millia^7 (compact form)"
-    print $q->header,
-	  $q->start_html('title' => 'The Name of a Number',
+    print $cgi->header,
+	  $cgi->start_html('title' => 'The Name of a Number',
 			 'bgcolor' => '#80a0c0'),
-	  $q->h1('The Name of a number'),
-	  $q->p,
+	  $cgi->h1('The Name of a number'),
+	  $cgi->p,
 	  "See the ",
-	  $q->a({'HREF' => "/chongo/number/example.html"},
+	  $cgi->a({'HREF' => "/chongo/number/example.html"},
 		  "example / help"),
 	  " page for an explination of the options below.\n",
-	  $q->p,
-	  $q->start_form,
+	  $cgi->p,
+	  $cgi->start_form,
 	  "Type of input:",
 	  "&nbsp;" x 4,
-	  $q->radio_group('name' => 'input',
+	  $cgi->radio_group('name' => 'input',
 			  'values' => ['number', 'exp', 'latin'],
 			  'labels' => \%input_label,
 			  'default' => 'number'),
-	  $q->br,
+	  $cgi->br,
 	  "Type of output:",
 	  "&nbsp;" x 2,
-	  $q->radio_group('name' => 'output',
+	  $cgi->radio_group('name' => 'output',
 			  'values' => ['name', 'digit'],
 			  'labels' => \%output_label,
 			  'default' => 'name'),
-	  $q->br,
+	  $cgi->br,
 	  "Name system:",
 	  "&nbsp;" x 4,
-	  $q->radio_group('name' => 'system',
+	  $cgi->radio_group('name' => 'system',
 			  'values' => ['usa', 'europe'],
 			  'labels' => \%system_label,
 			  'default' => 'usa'),
-	  $q->br,
+	  $cgi->br,
 	  "Millia styie:",
 	  "&nbsp;" x 8,
-	  $q->radio_group('name' => 'millia',
+	  $cgi->radio_group('name' => 'millia',
 			  'values' => ['dup', 'power'],
 			  'labels' => \%millia_label,
 			  'default' => 'dup'),
-	  $q->br,
+	  $cgi->br,
 	  "Dash styie:",
 	  "&nbsp;" x 10,
-	  $q->radio_group('name' => 'dash',
+	  $cgi->radio_group('name' => 'dash',
 			  'values' => ['nodash', 'dash'],
 			  'labels' => \%dash_label,
 			  'default' => 'nodash'),
-	  $q->p,
-	  $q->b('<FONT SIZE="+1">Enter a number:</FONT>'),
-	  $q->br,
-	  $q->textarea('name' => 'number',
-		       'rows' => '10',
-		       'columns' => '60'),
-	  $q->p,
-	  $q->submit(name=>'Name that number'),
-	  " &nbsp;&nbsp;\n",
-	  $q->reset('name' => 'Clear'),
-	  $q->end_form;
+	  $cgi->p,
+	  $cgi->b('<FONT SIZE="+1">Enter a number:</FONT>'),
+	  $cgi->br,
+	  $cgi->textarea('name' => 'number',
+		         'rows' => '10',
+		         'columns' => '60'),
+	  $cgi->p,
+	  $cgi->submit(name=>'Name that number'),
+	  $cgi->end_form;
     print $cgi->textarea(-name => 'number',
 		         -rows => '10',
 		         -columns => '60'), "\n";
@@ -1181,60 +1194,62 @@ sub cgi_form()
     print $cgi->submit(name=>'Name that number'), "\n";
     print $cgi->end_form, "\n";
 
-    if ($q->param()) {
+    if ($cgi->param()) {
 
 	# determine the input mode
 	#
-	if (defined($q->param('input'))) {
-	    if ($q->param('input') eq "exp") {
+	if (defined($cgi->param('input'))) {
+	    if ($cgi->param('input') eq "exp") {
 		$opt_p = 1;	# assume -p (power of 10)
-	    } elsif ($q->param('input') eq "latin") {
+	    } elsif ($cgi->param('input') eq "latin") {
 		$opt_L = 1;	# assume -L (1000 ^ (number+1))
 	    }
     #
 	if ($cgi->param('input') eq "exp") {
 	# determine the output mode
 	#
-	if (defined($q->param('output')) && $q->param('output') eq "digit") {
+	if (defined($cgi->param('output')) &&
+	    $cgi->param('output') eq "digit") {
 	    $opt_c = 1;		# assume -c (comma/dot decimal)
 	}
     # determine the output mode
 	# determine the system
 	#
-	if (defined($q->param('system')) && $q->param('system') eq "europe") {
+	if (defined($cgi->param('system')) &&
+	    $cgi->param('system') eq "europe") {
 	    $opt_e = 1;		# assume -e (European system)
 	}
     # determine the system
 	# determine the millia style
 	#
-	if (defined($q->param('millia')) && $q->param('millia') eq "power") {
+	if (defined($cgi->param('millia')) &&
+	    $cgi->param('millia') eq "power") {
 	    $opt_m = 1;		# assume -m (compact millia method)
 	}
 
 	# determine the dash method in names
 	#
-	if (defined($q->param('dash')) && $q->param('dash') eq "dash") {
+	if (defined($cgi->param('dash')) && $cgi->param('dash') eq "dash") {
 	    $opt_d = 1;		# assume -d (use -'s in names)
 	}
 
 	# get ready to print the value
 	#
-	print $q->hr,
-	      $q->p;
+	print $cgi->hr,
+	      $cgi->p;
 	if (defined($opt_c)) {
-	    print "\nDecimal value:\n";
+	    print $cgi->b("Decimal value:");
 	} else {
-	    print "\nName of number:\n";
+	    print $cgi->b("Name of number:");
 	}
-	print "\n<BLOCKQUOTE>\n",
-	      $q->b;
+	print "\n<BLOCKQUOTE>",
+	      "<PRE>";
     # determine the millia style
     # We have just the initial display.  There is no input value.
     # Just print the trailer and exit, do not return.
     if (defined($cgi->param('millia')) &&
     } else {
 	print "\n<BLOCKQUOTE>\n",
-	      $q->b,
 	      "<PRE>";
 	&trailer(0);
 	exit(0);
@@ -1242,13 +1257,13 @@ sub cgi_form()
 
     # determine the dash method in names
     #
-    return $q->param('number');
+    if (defined($cgi->param('dash')) && $cgi->param('dash') eq "dash") {
 	$opt_d = 1;		# assume -d (use -'s in names)
     }
 
     # return the number
-# usage:
-#	&trailer()
+    #
+#	$arg	1 => supress message about obtaining the source
 }
 
 # if surpressed.
@@ -1259,7 +1274,7 @@ sub cgi_form()
 # If the arg passed is 1, then the message about obtaining the source
 # if suppressed.
 #
-    print "</PRE>\n</B>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
+    print "</PRE>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
 
     # section off with a line
     #
@@ -1297,13 +1312,15 @@ sub cgi_form()
 
 # big_error - print a too big error and exit
 #
-# usage:
-#	$q	CGI object
-#
-sub big_error($)
+sub big_error()
 }
-    my $cgi = $_[0];	# get arg
 
+
+# big_err - print a too big error and exit
+    print "</PRE>\n<P>\n";
+    # close off input
+    #
+    if ($preblock) {
 	print $cgi->p, "\n";
 	print "</PRE>\n</BLOCKQUOTE>\n";
 	  "&nbsp;&nbsp;We have imposed an arbitrary size limit on",
@@ -1316,45 +1333,42 @@ sub big_error($)
 	  "the server to flood the network with lots of data ... assuming\n",
 	  "we had the memory to form the print buffer in the first place!\n",
 	  $cgi->p,
-	  "You have 3 choices:\n",
-	  "<ol>\n<li> You may enter a number that is\n",
-	  "is no more than $too_big characters in length.\n",
-	  "<li> You may raise 10 to a power where the exponent is\n",
-	  "no more than $too_big characters in length.\n",
+	  "You have 4 choices:\n",
+	  "<ol>\n<li> Enter a number that is ",
+	  "less than $too_big characters in length.\n",
+	  "<li> Compute a Latin power of a number that is ",
+	  "less than $too_big characters in length.\n",
+	  "<li> Raise 10 to a power where the exponent is ",
+	  "less than $too_big characters in length.\n",
 	  "<li> You may download the\n",
 	  $cgi->a({'href' => "/chongo/number/number"},
-		  "number.pl perl script"),
+		  "number perl script"),
 	  " and run it yourself.<br>\n",
-	  " If you do download the perl program, you should rename it",
-	  " <b>number.pl</b> when you save it.\n",
 	  $cgi->b("number.cgi"),
 	  $cgi->p,
 	  "The ",
 	  $cgi->a({'href' => "/chongo/number/number"},
-		  "number.pl perl script"),
+		  "number perl script"),
 	  " reads a number from standard input and has no size limit.<br>\n",
 	  " Try <b>./number -h</b> for more information.",
 	  $cgi->p,
 	  "NOTE: &nbsp;Numbers entered in scientific notation are currently\n",
 	  "expanded into the full decimal form prior to any \n",
 	  "$too_big character length checking.\n",
-	  $cgi->p,
-	  $cgi->hr,
 	  " operates as it is doing now with size limits.",
     &trailer(1);
 	  $cgi->b("number"),
 	  " reads a number from standard input, has no size limits",
 	  "and does not perform any CGI/HTML actions.",
 	  "</ol>\n",
-# error - report an error in HTML or die form
+# error - report an error in CGI/HTML or die form
     trailer(1);
-# usage:
-#	$q	CGI object
+    exit(1);
 }
 
 sub error($)
 # err - report an error in CGI/HTML or die form
-    my ($cgi, $msg) = @_;	# get args
+#
 # given:
 #	$msg	the message to print
 #
@@ -1362,7 +1376,7 @@ sub error($)
 	die $msg;
     #
     if ($html == 0 || $cgi == 0) {
-    # issue an error message in HTML
+	if ($html != 0) {
 	    print "Content-type: text/plain\n\n";
     print $cgi->p,
 	  $cgi->b("SORRY! "),
