@@ -226,7 +226,7 @@ MAIN:
 	    exit(0);
 	}
 
-	&error("usage: $0 $usage\n");
+	&error("usage: $0 $usage");
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
     #	    on the command line.
@@ -244,7 +244,7 @@ MAIN:
 	    &error("-c conflicts with either -l and/or -p");
 
 	    &error("You may only print decimal digits when the input is " .
-	        "just a number.\n");
+	        "just a number.");
     if ($opt_c && ($opt_l || $opt_p)) {
 	if ($html == 0) {
 	    err("-c conflicts with either -l and/or -p");
@@ -310,7 +310,7 @@ MAIN:
 	&big_error();
     }
 	    $num =~ s/^0+//;
-	&error("Numbers may have only one decimal $point.\n");
+	&error("Numbers may have only one decimal $point.");
     }
 
     # firewall
@@ -326,10 +326,11 @@ MAIN:
     # and convert it into a long decimal value.
     #
     if ($num =~ /[eE]/) {
-		"$sep's, leading 0's and whitespace characters are ignored.\n");
+	if ($num !~ /^[\d\Q$point\E]+[Ee]-?\d+$/o) {
+	    err(
 	        "Scientific numbers may only have a leading -, digits\n" .
 		"an optional decimal $point (optionally followed by digits)\n" .
-	    &error("Scientific numbers must at least a digit before the e.\n");
+	    &error("Scientific numbers must at least a digit before the e.");
 		"optional - and 1 more more digits after the e.  All\n" .
 	$num = &exp_number($num, $point, \$bias);
 		"are ignored.");
@@ -343,8 +344,9 @@ MAIN:
     #
     } else {
 	&error("A number may only have a leading -, digits and an " .
-	       "optional decimal $point.  All $sep's and whitespace\n" .
-	       "characters and leading 0's are ignored.\n");
+    }
+
+    # verify that we have a valid number
     #
     if ($num !~ /^[\d\Q$point\E]+$/o || $num =~ /^\Q$point\E$/) {
 	err("A number may only have a leading -, digits and an " .
@@ -372,7 +374,7 @@ MAIN:
     }
 
     # catch the case where we only want to enter a power of 10
-	    &error("The power must be a non-negative integer.\n");
+	    &error("The power must be a non-negative integer.");
     if ($opt_p || $opt_l) {
 
        # only allow powers of 10 that are non-negative integers
@@ -523,7 +525,7 @@ sub exp_number($$$)
 	# If we have more exp than $int digits, then we just
 	# tack the $int part onto the front of the $int part
 	# and set $int to 0.  This will result in a power of
-	    $$bias = $exp + length($frac);
+	# ten bias < 0.
 	#
 	if (length($int) <= -$exp) {
 
@@ -783,25 +785,68 @@ sub print_number($$\$$\$$$)
 		print "000";
 		$col += 3;
 	# 
-	# XXX - deal with bias < 0
-	#
 	    }
+	}
 
 	# print the decimal point/comma followed by the fractional
 	# part if needed
 	#
 	if (defined($$fract)) {
+	    my $offset;		# offset within fract bring printed
 
-	    # print the rest of the faction in linelen chunks
+	    # print the decimal point/comma and move to a new line
+	    #
+	    print "$point\n";
+	    $col = 1;
+	    $offset = 0;
+
+	    # if biased, print leading 0's then the fract digits
+	    # line with the first fract digits
+	    #
+	    if ($bias < 0) {
+
+		# print whole lines of 0's while we have lots of bias
 		#
-	    $fractlen = length($$fract);
-	    for ($i = 0; $i < $fractlen; $i += $linelen) {
-		print substr($$fract, $i, $linelen), "\n";
+		while ($bias < -$linelen) {
+		# Avoid using a BigInt in an ``x repeat'' context, 
+		    $bias += $linelen;
+		}
 
+		# print the last line of bias 0's
+		#
+		# Avoid using a BigInt in an ``x repeat'' context,
+		# it doesn't work well in some Perl v5 versions.
+		#
+		while ($bias < -8) {
+		    print "0" x 8;
+		    $offset += 8;
+		    $bias += 8;
+		}
+		while ($bias++ < 0) {
+		    print "0";
+		    $offset++;
+		}
 
-	# otherwise finish up the integer line
-	} else {
-	    print "\n";
+		# print the first line of fract to fill out the line
+		#
+		if ($offset <= $linelen) {
+		    print substr($$fract, 0, $linelen-$offset), "\n";
+		$fractlen = length($$fract);
+		} else {
+		    print "\n";
+		}
+
+		# print the rest of the faction in linelen chunks
+		#
+		for ($i = $linelen-$offset; $i < $fractlen; $i += $linelen) {
+		    print substr($$fract, $i, $linelen), "\n";
+		}
+
+		$fractlen = length($$fract);
+	    # non-biased printing of fract digits
+	    #
+	    } else {
+
 		# print the rest of the faction in linelen chunks
 		#
 	    }
@@ -942,7 +987,7 @@ sub american_kilo($)
 sub american_kilo($)
     if ($power < 0 || $power != int($power)) {
 	&error(
-	    "Negative and fractional powers of 1000 not supported: $power\n");
+	    "Negative and fractional powers of 1000 not supported: $power");
     }
 
     # firewall
@@ -986,7 +1031,7 @@ sub european_kilo($)
 {
     if ($power < 0 || $power != int($power)) {
 	&error(
-	    "Negative and fractional powers of 1000 not supported: $power\n");
+	    "Negative and fractional powers of 1000 not supported: $power");
     }
 
     # firewall
@@ -1247,7 +1292,7 @@ sub print_3($)
     my $num;		# working value of number
     my $name_3;		# 3 digit name
 
-	&error("print_3 called with arg not in [0,999] range: $number\n")
+	&error("print_3 called with arg not in [0,999] range: $number")
     #
     if (! defined($english_3[$number])) {
 
@@ -1580,14 +1625,15 @@ sub error($)
 #	$msg	the message to print
 #
     if ($html == 0) {
-	die $msg;
+    # just issue the die message if not in CGI/HTML mode
     #
     if ($html == 0 || $cgi == 0) {
 	if ($html != 0) {
 	    print "Content-type: text/plain\n\n";
     print $cgi->p,
 	  $cgi->b("SORRY! "),
-	  $msg;
+	  $msg,
+	  "\n";
     &trailer(0);
 	print $cgi->p, "\n";
 	print $cgi->hr, "\n";
