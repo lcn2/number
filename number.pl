@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #!/usr/bin/perl -w
-#  @(#} $Revision: 1.8 $
+#  @(#} $Revision: 1.9 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -63,7 +63,7 @@ use vars qw($opt_p $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.8 $';
+my $version = '$Revision: 1.9 $';
 
 # Warning state
 my $warn = $^W;
@@ -636,7 +636,6 @@ sub print_number($$\$$\$$)
 sub latin_root($)
 # form a name for 1000^($num+1), depending on American or European
     my $num = $_[0];	# number to construct
-    my $ret;	# the value to return
     my @set_3;	# set of 3rd digits (hundreds places) in a set of 3
     my @set_12;	# set of 1st & 2nd (tens & ones places) in a set of 3
     my $dig3;	# 3rd digit in a set of 3
@@ -645,6 +644,9 @@ sub latin_root($)
     my $l1;	# latin name for 1st digit in a set of 3
     # split num into sets of hundreds places and tens & ones places
     # it like an integer.  In the case of the web, we bail.  In
+    # XXX - This code should be improved to use $num as a string
+    #	    instead of splitting it into an array.
+    if ($millia == 0 && $num < @l_special) {
     $num =~ s/[^\d]//g;
     for ($i = length($num); $i >= 3; $i -= 3) {
 	push @set_12, substr($num, -2, 2);
@@ -660,7 +662,6 @@ sub latin_root($)
     #
     # We have to be careful about how we compute $millia+len-1
     # so that it will not become a floating value.
-    $ret = "";
     while (@set_12 > 1) {
 
 	# set the set of 3 digits
