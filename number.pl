@@ -1,6 +1,6 @@
-#!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.1 $
+#!/usr/bin/perl -w
+#  @(#} $Revision: 1.2 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -61,7 +61,7 @@ use vars qw($opt_p $opt_d $opt_c $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.1 $';
+my $version = '$Revision: 1.2 $';
 
 # Warning state
 my $warn = $^W;
