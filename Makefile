@@ -1,5 +1,5 @@
 #!/bin/make
-#  @(#} $Revision: 1.12 $
+#  @(#} $Revision: 1.13 $
 #  @(#} RCS control in /usr/local/src/cmd/number/Makefile
 #
 # number - number makefile
@@ -32,7 +32,7 @@ number.cgi: number.pl
 # So thus we do NOT need to install number.pl into the cgi-bin directory.
 #
 install: all
-	if [ -d ${WWW} ]; then \
+	-@if [ -d ${WWW} ]; then \
 	    echo "install -m 0644 number.cgi.txt ${WWW}"; \
 	    install -m 0644 number.cgi.txt ${WWW}; \
 	    echo "install -m 0755 number.cgi ${WWW}"; \
