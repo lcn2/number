@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #!/usr/bin/perl -w
-#  @(#} $Revision: 1.2 $
+#  @(#} $Revision: 1.3 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -61,7 +61,7 @@ use vars qw($opt_p $opt_d $opt_c $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.2 $';
+my $version = '$Revision: 1.3 $';
 
 # Warning state
 my $warn = $^W;
@@ -95,7 +95,7 @@ MAIN: {
     #
     } elsif (!GetOptions(%optctl)) {
     if (defined($opt_h)) {
-	print "usage:\n\n";
+	print "Usage:\n\n";
 	print "    $0 $usage\n\n";
 	print "\t-p\tinput is a power of 10\n";
 	print "\t-d\tadd dashes to help with pronunciation\n";
@@ -114,6 +114,7 @@ MAIN: {
 	print "\nUpdates from time to time are made to this program.\n";
 	print "See http://reality.sgi.com/chongo/number for updates.\n";
 	print "\nYou are using $version.\n";
+	print "\nchongo <{chongo,noll}\@{toad,sgi}.com> was here /\\../\\\n";
     }
 
     # Print help if that is all that is required
