@@ -1,8 +1,8 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.1 $
+#  @(#} $Revision: 2.2 $
 #
-# number - print the English name of a number
+# number - print the English name of a number of any size
 #
 # usage:
 #	number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [number]
@@ -22,11 +22,15 @@
 #
 #	number.cgi
 #
-# it acts like a CGI script with size of number limits.
+# it acts like a CGI script with suitable size limits for web applications.
 #
 # Be sure to see:
 #
 #	http://reality.sgi.com/chongo/number/number.html
+#
+# For an example of names of large numbers, see:
+#
+#	http://reality.sgi.com/chongo/prime/merdigit/index.html
 #
 # for examples/help as well as the latest version of this code.
 #
@@ -82,7 +86,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.1 $';
+my $version = '$Revision: 2.2 $';
 
 # GetOptions argument
 #
