@@ -1,18 +1,18 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.28 $
+#  @(#} $Revision: 1.30 $
 #
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]
+#	number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [number]
 #
 #	-p	input is a power of 10
-#	-L	input is a Latin power of 1000
+#	-l	input is a Latin power of 1000
 #	-d	add dashes to help with pronunciation
 #	-m	output name in a more compact exponential form
 #	-c	output number in comma/dot form
-#	-l	output number on a single line
+#	-o	output number on a single line
 #	-e	use European instead of American name system
 #	-h	print a help message only
 #
@@ -71,20 +71,20 @@
 #
 use strict;
 use Math::BigInt;
-use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
+use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 #use Getopt::Std;
 use Getopt::Long;
 # CGI requirements
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.28 $';
+my $version = '$Revision: 1.30 $';
 
 # GetOptions argument
 #
 my %optctl = (
-    "p" => \$opt_p, "L" => \$opt_L, "d" => \$opt_d, "m" => \$opt_m,
-    "c" => \$opt_c, "l" => \$opt_l, "e" => \$opt_e, "h" => \$opt_h
+    "p" => \$opt_p, "l" => \$opt_l, "d" => \$opt_d, "m" => \$opt_m,
+    "c" => \$opt_c, "o" => \$opt_o, "e" => \$opt_e, "h" => \$opt_h
 );
 
 # Warning state
@@ -98,8 +98,10 @@ my $warn = $^W;
 # the length of input as well as the exponent allowed in E notation.
 #
 # XXX - need to re-evaluate this in light of the use of the $bias BigInt
+#	and re-evaluate all of the logic that uses this limit value
 #
 my $too_big = "5000";   # too many digits for the web
+my $big_bias = 10000000; # too much output for the web (must be < 2^31)
 
 # To help pronounce values we put $dash between word parts
 #
@@ -134,17 +136,17 @@ my $cgi = 0;		# CGI object, if invoked as a CGI script
 
 # usage and help
 #
-my $usage = "number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [[--] number]";
+my $usage = "number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [[--] number]";
 my $help = qq{Usage:
 
     $0 $usage
 
 	-p	input is a power of 10
-	-L	input is a Latin power of 1000
+	-l	input is a Latin power of 1000
 	-d	add dashes to help with pronunciation
 	-m	output name in a more compact exponentation form
 	-c	output number in comma/dot form
-	-l	output number on a single line
+	-o	output number on a single line
 	-e	use European instead of American name system
 	-h	print a help message only
 	--	the arg that follows is a number (useful if number is <0)
@@ -172,7 +174,7 @@ my $help = qq{Usage:
     You are using $version.
 
     BUGS: On the command line, numbers in scientific notation with
-	  very large or very negative exponents could fail to produce 
+	  very large or very negative exponents could fail to produce
 	  correct results.  Often these failures occur when the exponent
 	  is >= 2^31 or <= -2^31.  This bug will be addressed in a
 	  future version ... when scientific notation values are
@@ -194,7 +196,7 @@ MAIN:
     my $system;		# American or European (but not a Swallow :-))
     my $visit;		# visit counter or error message
     my $num;		# input value
-    my $bias;		# power of 10 bias (as BigInt)
+    my $bias;		# power of 10 bias (as BigInt) during de-sci conversion
     my $neg;		# 1 => number if < 0
 
     # setup
@@ -235,11 +237,11 @@ MAIN:
     }
 
     # Print help if that is all that is required
-    # -c conflicts with -L and -p
+    #
     if ($opt_h) {
-    if (defined($opt_c) && (defined($opt_L) || defined($opt_p))) {
+    if (defined($opt_c) && (defined($opt_l) || defined($opt_p))) {
 	exit(0);
-	    &error("-c conflicts with -L and -p");
+	    &error("-c conflicts with either -l and/or -p");
 
 	    &error("You may only print decimal digits when the input is " .
 	        "just a number.\n");
@@ -330,6 +332,9 @@ MAIN:
 	    &error("Scientific numbers must at least a digit before the e.\n");
 		"optional - and 1 more more digits after the e.  All\n" .
 	$num = &exp_number($num, $point, \$bias);
+		"are ignored.");
+    # We did not have a number is scientific notation so we have no bias
+	if ($num !~ /^\Q$point\E?\d/o) {
 	    err("Scientific numbers must at least a digit before the e.");
 	}
 	$num = exp_number($num, $point, \$bias);
@@ -346,9 +351,23 @@ MAIN:
 	       "optional decimal ``$point''.\n" .
 	       "All 3 digit separators and" .
     # split into integer and fractional parts
+    #
+    ($integer, $fract) = split /\Q$point\E/, $num;
+    if ($integer =~ /^$/) {
+	$integer = "0";
+    }
+
+    # verify that the number and the bias match
+    #
+	&error("FATAL: Internal error, bias: $bias > 0 and fract: $fract != 0");
+    # there is not enough digits right or left of the decimal point/comma.
+    # A $bias > 0 can only happen when we have a 0 $fract part.
+	&error("FATAL: Internal error, bias: $bias < 0 and int: $integer != 0");
+	} else {
+	    print $cgi->b("Name of number:"), "\n";
 	}
 	print $cgi->p, "\n";
-    if ($opt_p || $opt_L) {
+	print "<BLOCKQUOTE><PRE>\n";
 	$preblock = 1;
     }
 
@@ -365,19 +384,16 @@ MAIN:
        #
        } else {
 	   power_of_ten(\$integer, $system, $bias);
-	if ($opt_l) {
-	    # XXX - need to pass in the $bias BigInt
-	    &print_number($sep, $neg, \$integer, $point, \$fract, 0);
+       }
+	    &print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
     # print the number comma/dot separated
-	    # XXX - need to pass in the $bias BigInt
-	    &print_number($sep, $neg, \$integer, $point, \$fract, 76);
+	    &print_number($sep, $neg, \$integer, $point, \$fract, 76, $bias);
     } elsif ($opt_c) {
 
 	if ($opt_o) {
 	    print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
 	} else {
-	# XXX - need to pass in the $bias BigInt
-	&print_name($neg, \$integer, \$fract, $system);
+	&print_name($neg, \$integer, \$fract, $system, $bias);
 	}
 
     # otherwise print the first part of the response if allowed
@@ -439,6 +455,13 @@ sub exp_number($$$)
     my $int;	# integer part of lead
     my $frac;	# fractional part of lead
 
+    # we have something like -3.5e70 or .5e50 or 4E50 or 4.E-49
+    # break it apart into before and after the E
+    #
+	$$bias = Math::BigInt->new("0");
+    $exp = Math::BigInt->new($expstr);
+
+    # If we have a 0 exponent, just return the lead with a zero bias
     #
     if ($exp == 0) {
 	$$bias = $zero;
@@ -535,22 +558,38 @@ sub exp_number($$$)
 # print_number - print the number with ,'s or .'s
 #
 # given:
+#	$sep		, or . set of 3 digit separators
+#			    notation converstion
 #	\$integer	integer part of the number
-sub print_number($$\$$\$$)
+sub print_number($$\$$\$$$)
 #	\$fract		fractional part of number (or undef)
-    my ($sep, $neg, $integer, $point, $fract, $linelen) = @_;	# get args
-    my $wholelen;	# length of the integer part
+#	$linelen	max line length (0 => no limit)
+#	$bias		power of 10 bias (as BigInt) during de-sci
+#			    notation conversion
+    my $intlen;		# length of the integer part without bias
     my $fractlen;	# length of the fractional part
     my $leadlen;	# length of digits, seperaotrs and - on 1st line
     my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
+    my $wholelen;	# length of the integer part as modified by bias
     my $intlen = 0;	# length of the integer part without bias
     my $fractlen = 0;	# length of the fractional part
     my $leadlen;	# length of digits, separators and - on 1st line
     my $fulllen;	# approximate length of the input
-    if ($$integer eq "") {
+    my $col;		# current output column, first col is 1
     my $nonint_bias = 0;    # 1 => $bias is very large, process with care
     my $i;
 
+    # deal with the zero special case
+    #
+    if (!defined($$integer) || $$integer eq "") {
+	$$integer = "0";
+    }
+
+    # watch out for large a bias
+    if ($nonint_bias && $html == 1) {
+	&big_error();
+	$fulllen = $bias->babs;
+	$fulllen += $fractlen;
 	$fulllen += int($intlen*4/3);
 	if ($fulllen < -$big_decimal || $fulllen > $big_decimal) {
 	    big_err();
@@ -569,13 +608,55 @@ sub print_number($$\$$\$$)
 
     # no line length specified (or value passed < 4) means just print it
     # on a single line
+    #
+    if ($linelen == 0) {
 
-	    print $$integer, $point, $$fract, "\n";
+	# Print the number, and fraction if it exists on a single line.
+	#
+	if (defined($$fract)) {
 
+	    # deal with a leading - if needed
+	    print "-" if $neg;
+
+	    # print thru the decimal point
+	    print $$integer, $point;
+
+	    # if biased, print 0's then fract
+	    if ($bias < 0) {
+
+		# if bias is not int sized, print in 'smaller' chunks
+		# until bias is again in sized
+		if ($nonint_bias) {
+		    while (($bias += $big_bias) < -$big_bias) {
+			print "0" x $big_bias;
+		    }
+		}
+		print "0" x $bias, $$fract;
+
+	    # if non-biased, just print fract
+	    } else {
 		print $$fract;
-	    print $$integer, "\n";
+	    }
+
+	} else {
+
+	    # deal with a leading - if needed
+	    print "-" if $neg;
+
+	    # print the integer digits
+	    print $$integer;
+
+	    # if biased, print 0's
+	    if ($bias > 0) {
+
+		# if bias is not int sized, print in 'smaller' chunks
+		# until bias is again in sized
+		if ($nonint_bias) {
 		    while (($bias -= $big_bias) > $big_bias) {
 			print "0" x $big_bias;
+	# end of the number
+	print "\n";
+
 		    }
 		}
 		print "0" x $bias;
@@ -583,12 +664,17 @@ sub print_number($$\$$\$$)
 	}
 
     # If we have a line length, we need to insert newlines after
-	$wholelen = length($$integer);
+	$intlen = length($$integer);
+    # the separators to keep within the max line length.
+    #
+    } else {
+
 	# determine the length of the integer part of the number
 	#
 	$wholelen = Math::BigInt->new($intlen);
+	    # account for separators
 	    #
-	} else {
+	    # Some BigInt implementations issue uninitialized
 	    # warnings internal to the BigInt code with the
 	    # division below.  We block these bogus warnings.
 	    #
@@ -598,7 +684,9 @@ sub print_number($$\$$\$$)
 	}
 	if ($neg) {
 	    # account for - sign
+	# decimal point/comma will line up at the end of a line
 	#
+	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# modulus below.  We block these bogus warnings.
 	#
@@ -619,16 +707,34 @@ sub print_number($$\$$\$$)
 		print "-\n";
 		$col = 1;
 	    } else {
-	$i = length($$integer) % 3;
+		print "-";
+	if ($bias > 0) {
+
+	    # Some BigInt implementations issue uninitialized
+	    # warnings internal to the BigInt code with the
+	    # modulus below.  We block these bogus warnings.
+	    #
+	    $^W = 0;
+	    # avoid turning $i in to a BitInt because of the
+	    # later use in substr()
+	    if ($bias % 3 == 0) {
+		$i = $intlen % 3;
+	    } elsif ($bias % 3 == 1) {
+		$i = ($intlen+1) % 3;
+	    } else {
 		$i = ($intlen+2) % 3;
 	    }
 	    $^W = $warn;
 	} else {
-	print substr($$integer, 0, $i);
+	    $i = $intlen % 3;
+	}
+	if ($i == 0) {
+	    $i = 3;
+	}
 	$col += $i;
 	# output , and 3 digits until whole number is exhusted
 	    print substr($$integer, 0, $i), 0 x ($i-$intlen);
-	while ($i < $wholelen) {
+	} else {
 	    print substr($$integer, 0, $i);
 	}
 
@@ -642,13 +748,42 @@ sub print_number($$\$$\$$)
 	    if (++$col >= $linelen) {
 		print "$sep\n";
 		$col = 1;
-	    print substr($$integer, $i, 3);
+	    } else {
+		print $sep;
+	    }
+
+	    # output 3 more digits
 	    #
 	    if ($i+3 > $intlen) {
 		print substr($$integer, $i, 3), 0 x ($i+3-$intlen);
 	    } else {
+		print substr($$integer, $i, 3);
+	    }
+	    $col += 3;
+	    $i += 3;
+	}
+
+	# if biased > 0, output sets of 0's until decimal point/comma
+	#
+	if ($wholelen > $intlen) {
+	    while ($i < $wholelen) {
+
+		# output the separator, we add a newline if the line
+		# is at or beyond the limit
+		#
+		if (++$col >= $linelen) {
+		    print "$sep\n";
+		    $col = 1;
+		} else {
+		    print $sep;
+		}
+
+		# output 3 more digits
+		#
 		print "000";
 		$col += 3;
+	# 
+	# XXX - deal with bias < 0
 	#
 	    }
 
@@ -908,16 +1043,16 @@ sub power_of_ten($$$)
 
     # convert the power of 10 into a multipler and a power of 1000
 
-    # If we gave -L, then we will assume that we are dealing with
+    # Convert $$power arg into BigInt format
     #
     $big = Math::BigInt->new($$power);
-    if ($opt_L) {
+
     # convert the power of 10 into a multiplier and a power of 1000
-	# under -L, we deal with powers of 1000 above 1000
+	if ($biasmod3 == 1) {
 	    $big *= 10;
 	$kilo_power = $big + 1;
 	    $big *= 100;
-	# under -L, our miltiplier name is always one
+	# under -l, our miltiplier name is always one
 
 	# under -l, we deal with powers of 1000 above 1000
 	#
@@ -996,9 +1131,13 @@ sub power_of_ten($$$)
 
 #	$system	the number system ('American' or 'European')
 #
-sub print_name($\$\$$)
+#			    notation converstion
+#	$neg		1 => number is negative, 0 => non-negative
+# XXX - need to use the bias arg
+#
+sub print_name($\$\$$$)
 #	\$fract		fractional part of number (or undef)
-    my ($neg, $integer, $fract, $system) = @_;	# get args
+#	$system		number system ('American' or 'European')
 sub print_name($$$$$)
     my $bias_mod3;	# bias % 3
     my $millia;		# millia arg, power of 1000 for a given set f 3
@@ -1041,7 +1180,7 @@ sub print_name($$$$$)
 	$set3 = substr($$integer, $indx, 3);
     }
 
-	if (defined $opt_l) {
+	if (defined $opt_o) {
     #
     while (--$cnt3 >= 0) {
 	$set3 = substr($intstr, $indx, 3);
@@ -1063,7 +1202,7 @@ sub print_name($$$$$)
 
     # print after the decimal point if needed
     #
-	if (defined $opt_l) {
+	if (defined $opt_o) {
 	    print " ";
 	} else {
         my $len;	# length of current line
@@ -1077,7 +1216,7 @@ sub print_name($$$$$)
 		    print "\n$zero";
 		    $len = $diglen - 1;
 		}
-	    if (defined $opt_l) {
+	    if (defined $opt_o) {
 		print " ";
 	for ($i=0; $i < length($$fract); ++$i) {
 		print "\n";
@@ -1258,7 +1397,7 @@ sub cgi_form()
 	    if ($cgi->param('input') eq "exp") {
 		$opt_p = 1;	# assume -p (power of 10)
 	    } elsif ($cgi->param('input') eq "latin") {
-		$opt_L = 1;	# assume -L (1000 ^ (number+1))
+		$opt_l = 1;	# assume -l (1000 ^ (number+1))
 	    }
     #
 	if ($cgi->param('input') eq "exp") {
@@ -1365,6 +1504,8 @@ END_OF_HTML
     </BLOCKQUOTE>
 
 # big_error - print a too big error and exit
+    </HTML>
+# XXX - reword this given the new bias changes
 #
 sub big_error()
 }
