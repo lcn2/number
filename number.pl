@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.30 $
+#  @(#} $Revision: 1.33 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -78,7 +78,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.30 $';
+my $version = '$Revision: 1.33 $';
 
 # GetOptions argument
 #
@@ -101,7 +101,11 @@ my $warn = $^W;
 #	and re-evaluate all of the logic that uses this limit value
 #
 my $too_big = "5000";   # too many digits for the web
-my $big_bias = 10000000; # too much output for the web (must be < 2^31)
+my $big_bias = 1000000; # too much output for the web (must be < 2^31)
+
+# misc BigInt
+#
+my $zero = Math::BigInt->new("0");
 
 # To help pronounce values we put $dash between word parts
 #
@@ -856,14 +860,18 @@ sub print_number($$\$$\$$$)
     # end of the number
     print "\n";
 #	$num	number to construct
+#	$millia	addition number of millia to add to the latin_root
 
 # latin_root - return the Latin root of a number
 #
 # given:
 #	$num	   number to construct
-sub latin_root($)
+#	$millia	   addition number of millia to add to the latin_root
+#
+# Prints the latin root name on which we can add llion or lliard to
 # form a name for 1000^($num+1), depending on American or European
-    my $num = $_[0];	# number to construct
+# name system.
+#
 # The effect of $millia is to multiply $num by 1000^$millia.
 #
 sub latin_root($$)
@@ -872,35 +880,68 @@ sub latin_root($$)
     my $numstr;	# $num as a string
     my @set3;	# set of 3 digits, $set3[0] is the most significant
     my $d3;	# 3rd digit in a set of 3
+    my $millia_cnt;	# number of millia's to print
+    my $millia_cnt_str;	# $millia_cnt as a string
+    my $nonint_millia = 0;    # 1 => $millia is very large, process with care
     my $l2;	# latin name for 2nd digit in a set of 3
     my $l1;	# latin name for 1st digit in a set of 3
+    my $len;	# number of sets of 3 including the final (perhaps partial) 3
+    my $millia_cnt;		# number of millia's to print
+    my $millia_cnt_str;		# $millia_cnt as a string
+	&error("FATAL: Internal error, millia: $millia < 0 in latin_root()");
+    my $i;
+
+    # firewall
+    #
+    if ($millia < 0) {
+	err("FATAL: Internal error, millia: $millia < 0 in latin_root()");
+    }
+
+    # watch out for large a bias
+    if ($nonint_millia && $html == 1 && !$opt_m) {
+	&big_error();
+    }
+    #
     # If $bias is larger than $big_bias, then we cannot just treat
     # it like an integer.  In the case of the web, we bail.  In
-    if ($num < @l_special) {
+    if ($num < @l_special && $millia == 0) {
     #
     $nonint_millia = 1 if ($millia > $big_bias);
 
     # deal with small special cases for small values
     #
     if ($millia == 0 && $num < @l_special) {
-    $num =~ s/[^\d]//g;
-    $i = length($num);
+	print $l_special[$num], $dash;
+	return;
     }
 
-	@set3 = unpack("a3"x$len, $num);
+    # determine the number of sets of 3 and the length
     #
-	@set3 = unpack("a"."a3"x($len-1), $num);
+    ($numstr = $num) =~ s/[^\d]//g;
     $i = length($numstr);
     $len = int(($i + 2) / 3);
-	@set3 = unpack("a2"."a3"x($len-1), $num);
+    if ($i % 3 == 0) {
 	@set3 = unpack("a3"x$len, $numstr);
     } elsif ($i % 3 == 1) {
 	@set3 = unpack("a"."a3"x($len-1), $numstr);
+	$set3[0] = "00" . $set3[0];
+    } else {
+	@set3 = unpack("a2"."a3"x($len-1), $numstr);
+	$set3[0] = "0" . $set3[0];
+    }
+
+    # Determine how many millia's we will initially print
     #
     # We have to be careful about how we compute $millia+len-1
     # so that it will not become a floating value.
     #
     $millia_cnt = $millia + $len;
+
+    # process each set of 3 digits up to but not
+    # including the last set of 3
+	#
+	if ($millia_cnt > 0) {
+	    # Some BigInt implementations issue uninitialized
 	    # warnings internal to the BigInt code with the
 	    # decrement below.  We block these bogus warnings.
 	    #
@@ -922,7 +963,7 @@ sub latin_root($$)
 	#
 	$d1 = substr($set3[$i], 2, 1);
 	$l1 = (($d1 > 0) ? $l_unit[$d1] . $dash : "");
-
+ 
 	$l2 = (($d2 > 0) ? $l_ten[$d2] . $dash : "");
 	$d3 = substr($set3[$i], 0, 1);
 	$l3 = (($d3 > 0) ? $l_hundred[$d3] .
@@ -930,23 +971,33 @@ sub latin_root($$)
 			   $dash : "");
 
 	# print the 3 digits
-	#	millia-tillion
+	#
 	# We will skip the printing of the 3 digits if
 	# we have just 001 in all but the lowest set of 3.
 	# This results in no output do that we wind up with
-	#	un-millia-tillion
+	# something such as:
 	#
-	if ($i == $len-1 || $d1 != 1 || $d2 != 0 || $d3 != 0) {
+	#	something-tillion
 	#
 	# instead of:
 	#
-	# add one the millia as needed
+	#	un-something-tillion
 	#
-	if ($i < $len-1) {
-	    if ($opt_m && $i < $len-2) {
-		print "millia^", $len-$i-1, "$dash";
+	if ($i > 0 || $d3 != 0 || $d2 != 0 || $d1 != 1) {
+	    print "$l3$l1$l2";
+	}
+
+	# print millia's as needed
+	#
+	if ($millia > 0 || $i < $len-1) {
+	    if ($opt_m) {
 		if ($millia_cnt > 1) {
-		print "millia$dash" x ($len-$i-1);
+		    ($millia_cnt_str = $millia_cnt) =~ s/[^\d]//g;
+		    print "millia^", $millia_cnt_str, "$dash";
+		} else {
+		    print "millia", "$dash";
+		}
+	    } else {
 		if ($nonint_millia) {
 		    while (($millia_cnt -= $big_bias) > $big_bias) {
 			print "millia$dash" x $big_bias;
@@ -1003,7 +1054,7 @@ sub american_kilo($)
 
     # We must deal with 1 special since it does not use a direct Latin root
     #
-	&latin_root($power-1);
+	&latin_root($power-1, $zero);	# XXX
 
     # Otherwise we use the Latin root process to construct the value.
     #
@@ -1047,13 +1098,13 @@ sub european_kilo($)
     # Even roots use "llion"
     } elsif ($power == 1) {
     } elsif ($power % 2 == 0) {
-	&latin_root($power/2);
+	&latin_root($power/2, $zero);	# XXX
 	print "llion";
 
     # Odd roots use "lliard"
     #
     } elsif ($power % 2 == 1) {
-	&latin_root(int($power/2));
+	&latin_root(int($power/2), $zero);	# XXX
 	print "lliard";
 	# Odd roots use "lliard"
 	#
@@ -1075,7 +1126,8 @@ sub power_of_ten(\$$$)
 #	$bias	power of 10 bias (as BigInt) during de-sci notation conversion
 #
 sub power_of_ten($$$)
-    my $one;				# 1 as a BigInt;
+{
+    my ($power, $system, $bias) = @_;	# get args
     my $mod3;				# $big mod 3
     my $mod2;				# $kilo_power mod 2
     my $biasmod3;			# bias mod 3
@@ -1083,13 +1135,21 @@ sub power_of_ten($$$)
 	&error("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
     my $i;
 
-    # make 1  :-)
+    # firewall
     #
-    $one = Math::BigInt->new("1");
+    if ($bias < 0) {
 	err("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
-    # Convert $$power arg into BigInt format
+    # increase the power based on bias mod 3
     #
-    $big = Math::BigInt->new($$power);
+    $^W = 0;
+    $biasmod3 = $bias->bmod(3);
+    $biasmillia = ($bias - $biasmod3) / 3;
+    $^W = $warn;
+    if ($biasmod3 == 1) {
+	$big *= 10;
+    } elsif ($biasmod3 == 2) {
+	$big *= 100;
+    }
 
     # convert the power of 10 into a multipler and a power of 1000
 
@@ -1111,15 +1171,16 @@ sub power_of_ten($$$)
 		       "10\n" .
 		       "of 10 at this time.  Try using Latin powers or enter" .
 	# convert power of 10 into power of 1000
-	$kilo_power = $big / 3;
+	#
+	$mod3 = $big->bmod(3);
+	$kilo_power = ($big - $mod3) / 3;
+	# Some BigInt implementations issue uninitialized
 	# bdiv below.  We block these bogus warnings.
 	# print the multipler name
 	$^W = 0;
-	$mod3 = ($big % 3);
+	($kilo_power, $mod3) = $big->bdiv(3);
 	$^W = $warn;
-	if ($mod3->bcmp($one) < 0) {
-	$^W = $warn;
-	} elsif ($mod3->bcmp($one) == 0) {
+	$biasmillia = $zero;
 
 	# print the multiplier name
 	#
@@ -1134,21 +1195,23 @@ sub power_of_ten($$$)
 	    print "ten";
 	} else {
 	    print "one hundred";
-    if ($kilo_power->bcmp($one) < 0) {
+	}
     }
 
     # A zero kilo_power means that we only have 1, 10 or 100
     # and so there is nothing else to print.
     #
-    } elsif ($kilo_power->bcmp($one) == 0) {
+    if ($kilo_power < 1 && $biasmillia == 0) {
 	# nothing else to print
 
     # We must treat a kilo_power of 1 as a special case
     # because 'thousand' does not have a Latin root base.
     #
     } elsif ($kilo_power == 1 && $biasmillia == 0) {
+#print "\nDEBUG: here #4 biasmillia: $biasmillia\n";
+#print "DEBUG: kilo_power: $kilo_power\n";
 	print " thousand";
-	&latin_root($kilo_power-1);
+	&latin_root($kilo_power-1, $biasmillia);
     # print the name based on the American name system
     #
     } elsif ($system eq 'American') {
@@ -1156,16 +1219,20 @@ sub power_of_ten($$$)
 	print " ";
 	latin_root($kilo_power-1, $biasmillia);
 	# is even or odd.
-	$mod2 = $kilo_power % 2;
-	$kilo_power /= 2;
+	if ($biasmillia % 2 == 1) {
+	    $kilo_power *= 1000;
+	    --$biasmillia;
+	    # the "lliard" roots
+	$biasmillia /= 2;
+	($mod2, $kilo_power) = $kilo_power->bdiv(2);
 	    #
-	if ($mod2->bcmp($one) < 0) {
+	    }
 	}
-	    &latin_root($kilo_power);
+	    &latin_root($kilo_power, $biasmillia);
 
 	    print " ";
 	    latin_root($kilo_power, $biasmillia);
-	    &latin_root($kilo_power);
+	    &latin_root($kilo_power, $biasmillia);
 
 	# Odd roots use "lliard"
 	#
