@@ -1,8 +1,8 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.40 $
+#  @(#} $Revision: 2.1 $
 #
-# number - print the English name of a number in non-HTML form
+# number - print the English name of a number
 #
 # usage:
 #	number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [number]
@@ -17,6 +17,12 @@
 #	-h	print a help message only
 #
 # If number is omitted, then it is read from standard input.
+#
+# When ran as:
+#
+#	number.cgi
+#
+# it acts like a CGI script with size of number limits.
 #
 # Be sure to see:
 #
@@ -76,7 +82,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.40 $';
+my $version = '$Revision: 2.1 $';
 
 # GetOptions argument
 #
@@ -96,9 +102,9 @@ my $big_input = 100000;		# too many input digits for the web
 my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
 my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
 
-# We have optimizatins that allow us to treat a large power of 10 bias
+# We have optimizations that allow us to treat a large power of 10 bias
 # (due to conversion of a very large scientific notation number) in
-# a different fastion from a small bias.
+# a different fashion from a small bias.
 #
 # This value must be able to be be represented as an integer (say < 2^31).
 # In practive this should be even smaller.
@@ -572,7 +578,7 @@ sub print_number($$\$$\$$$)
 #
 sub print_number($$$$$$$)
 {
-    my $fulllen;	# aproximate length of the input
+    # get args
     my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
     my $wholelen;	# length of the integer part as modified by bias
     my $intlen = 0;	# length of the integer part without bias
@@ -1170,7 +1176,7 @@ sub power_of_ten(\$$$)
 sub power_of_ten($$$)
 {
     my ($power, $system, $bias) = @_;	# get args
-    my $bias_big;			# aprox power of 10 ($bias+$big)
+    my $kilo_power;			# power of 1000 to ask about
     my $big;				# $power as a BigInt
     my $mod3;				# $big mod 3
     my $mod2;				# $kilo_power mod 2
@@ -1759,7 +1765,7 @@ sub cgi_form()
     #
     if ($html == 1) {
 	print "<HR>\n<P>\n";
-	The <A HREF="/chongo/number/number.cgi.txt">source</A> for this CGI
+	The <A HREF="/chongo/number/number">source</A> for this CGI
 	script is available. Save it as either the filename<BR>
     if (defined($arg) && $arg == 0) {
 	print <<END_OF_HTML;
@@ -1813,7 +1819,7 @@ sub big_error()
 	  "of number that the algorithm can name, we had to put some limit\n",
 	  "on the amount of output we will print.  Otherwise someone\n",
 	  "could enter a huge number such as causing the server to flood the\n",
-	  "The arbitrary size limit as aproximately as follows:\n",
+	  "network with lots of data ... assuming we had the memory to form\n",
 	  "the print buffer in the first place!\n";
 
 	  "<LI> Latin power scientific notation exponent &lt; ",
@@ -1821,7 +1827,7 @@ sub big_error()
     print $cgi->p,
 		"keep <I>exp</I> &lt; ", $big_latin_power,
 	  "<UL>\n",
-	  "<LI> Decimal expanstion limited to about $big_decimal digits\n",
+	  "<LI> No more than $big_input characters of input\n",
 	  "<LI> Latin power scientific notation exponent &lt; ",
 		$big_latin_power, " when using non-compact millia style<BR>\n",
 	        "(i.e., when entering <I>digits</I><B>e</B><I>exp</I> ",
@@ -1834,7 +1840,7 @@ sub big_error()
     #
     if ($opt_c) {
 	print $cgi->p,
-	      "You might try rasinig ",
+	      "Instead of printing the digits of a number, you might\n",
 	      "try printing the ",
 	      $cgi->b("English name"),
 	      " instead.\n";
@@ -1854,12 +1860,12 @@ sub big_error()
 
     # tell them about running it themselves
     #
-	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
+	  $cgi->a({'href' => "/chongo/number/number"},
 	  "If none of those options are what you want/need, you can\n",
 	  "run this program on your own computer in the non-CGI mode.\n",
 	  "The non-CGI mode has no internal size restrictions and is\n",
 	  "limited only by time and your systems resources.\n",
-	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
+	  $cgi->a({'href' => "/chongo/number/number"},
 	  $cgi->a({'href' => "/chongo/tech/math/number/number"},
 		  "source"),
 	  " and run it yourself.\n",
