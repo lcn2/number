@@ -8,7 +8,7 @@
 #	number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [number]
 #
 #	-p	input is a power of 10
-#	-l	input is a Latin power of 1000
+#	-l	input is a Latin power (1000^x)
 #	-d	add dashes to help with pronunciation
 #	-m	output name in a more compact exponential form
 #	-c	output number in comma/dot form
@@ -92,7 +92,7 @@ my $warn = $^W;
 # very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
-my $big_input = 10000;		# too many input digits for the web
+my $big_input = 100000;		# too many input digits for the web
 my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
 my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
 
@@ -108,10 +108,6 @@ my $big_bias = 1000;		# a big bias (should be < 2^31).
 # misc BigInt
 #
 my $zero = Math::BigInt->new("0");
-my $googol10;		# 10^1000
-my $googol;		# 10^100
-my $ten_to_ten;		# 10^10
-my $ten;		# 10^1
 
 # To help pronounce values we put $dash between word parts
 #
@@ -152,7 +148,7 @@ my $help = qq{Usage:
     $0 $usage
 
 	-p	input is a power of 10
-	-l	input is a Latin power of 1000
+	-l	input is a Latin power (1000^x)
 	-d	add dashes to help with pronunciation
 	-m	output name in a more compact exponentiation form
 	-c	output number in comma/dot form
@@ -1217,8 +1213,7 @@ sub power_of_ten($$$)
 	$^W = $warn;
 	if ($biasmod3 == 1) {
 	    $big *= 10;
-	$kilo_power = $big->bnorm;
-	++$kilo_power;
+	} elsif ($biasmod3 == 2) {
 	    $big *= 100;
 	}
 
@@ -1598,7 +1593,7 @@ sub cgi_form(\$)
 #	$num	input value
 #
 sub cgi_form()
-	"latin" => " Latin power (1000^(number+1))"
+{
     # radio label sets
     #
     my %input_label = (
@@ -1686,7 +1681,7 @@ sub cgi_form()
 	    if ($cgi->param('input') eq "exp") {
 		$opt_p = 1;	# assume -p (power of 10)
 	    } elsif ($cgi->param('input') eq "latin") {
-		$opt_l = 1;	# assume -l (1000 ^ (number+1))
+		$opt_l = 1;	# assume -l (1000 ^ number))
 	    }
     #
 	if ($cgi->param('input') eq "exp") {
@@ -1841,7 +1836,7 @@ sub big_error()
 	print $cgi->p,
 	      "You might try rasinig ",
 	      "try printing the ",
-	      " (1000^(latin_power+1)) instead of just powers of 10.\n";
+	      $cgi->b("English name"),
 	      " instead.\n";
     } elsif ($opt_p) {
 	print $cgi->p,
