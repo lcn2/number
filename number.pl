@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.16 $
+#  @(#} $Revision: 1.17 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -73,7 +73,7 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.16 $';
+my $version = '$Revision: 1.17 $';
 
 # Warning state
 my $warn = $^W;
@@ -1155,8 +1155,7 @@ sub cgi_form()
 	  $q->submit(name=>'Name that number'),
 	  " &nbsp;&nbsp;\n",
 	  $q->reset('name' => 'Clear'),
-	  $q->end_form,
-	  $q->hr;
+	  $q->end_form;
     print $cgi->textarea(-name => 'number',
 		         -rows => '10',
 		         -columns => '60'), "\n";
@@ -1202,24 +1201,23 @@ sub cgi_form()
 
 	# get ready to print the value
 	#
-	print $q->p;
+	print $q->hr,
+	      $q->p;
 	if (defined($opt_c)) {
 	    print "\nDecimal value:\n";
 	} else {
 	    print "\nName of number:\n";
 	}
-	print $q->p,
-	      "\n<BLOCKQUOTE>\n",
+	print "\n<BLOCKQUOTE>\n",
 	      $q->b;
     # determine the millia style
     # We have just the initial display.  There is no input value.
     # Just print the trailer and exit, do not return.
     if (defined($cgi->param('millia')) &&
     } else {
-	print $q->p,
-	      "\n<BLOCKQUOTE>\n",
+	print "\n<BLOCKQUOTE>\n",
 	      $q->b,
-	      "\n<PRE>\n";
+	      "<PRE>";
 	&trailer(0);
 	exit(0);
     }
@@ -1243,20 +1241,20 @@ sub cgi_form()
 # If the arg passed is 1, then the message about obtaining the source
 # if suppressed.
 #
-    print "\n</PRE>\n</B>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
+    print "</PRE>\n</B>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
 
     # section off with a line
     #
     if ($html == 1) {
 	print "<HR>\n<P>\n";
-	The <A HREF="/chongo/number/number.cgi.txt">source</A> for this CGI
+	The <A HREF="/chongo/number/number">source</A> for this CGI
 	script is available.
 	Save it as either <B>number.cgi</B> and/or <B>number</B>.
 	<p>
-	If you run this program as <B>number</B> (i.e., without the <B>.cgi</B> 
-	extension), 
+	If you run this program as <B>number</B> (i.e., without the <B>.cgi</B>
+	extension),
 	then it runs as normal program without all of the CGI/HTML stuff.
-	In normal program mode, the program does not enforce an arbitrary 
+	In normal program mode, the program does not enforce an arbitrary
 	size limit.
 	Try <B>./number -h</B> for more information.
         <B>number.cgi</B> or <B>number</B>.
