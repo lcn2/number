@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.17 $
+#  @(#} $Revision: 1.18 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -73,10 +73,18 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.17 $';
+my $version = '$Revision: 1.18 $';
 
 # Warning state
 my $warn = $^W;
+
+# We setup this arbitrary limit so that people to not enter
+# very large numbers and drive that server crazy.  The algoritm
+# used has no limit so we pick 2500 digits as a arbitrary limit.
+# This digit count is not exact, but serves as a limiter on
+# the length of input as well as the exponent allowed in E notation.
+#
+my $too_big = "2500";   # too many digits for the web
 
 # To help pronounce values we put $dash between word parts
 #
@@ -168,6 +176,7 @@ MAIN:
 
     # determine if we are CGI based
     #
+    $q = 0;
     if ($0 =~ /\.cgi$/) {
 
 	# we are a CGI script, web restictions apply
@@ -196,6 +205,17 @@ MAIN:
     }
 
     # Print help if that is all that is required
+    # -c conflicts with -L and -p
+    if ($opt_h) {
+    if (defined($opt_c) && (defined($opt_L) || defined($opt_p))) {
+	exit(0);
+	    &error($q, "-c conflicts with -L and -p");
+
+	    &error($q, "You may only print decimal digits when the input is " .
+		   "just a number.\n");
+    if ($opt_c && ($opt_l || $opt_p)) {
+	if ($html == 0) {
+	    err("-c conflicts with either -l and/or -p");
 	} else {
 	    err("You may only print decimal digits when the <I>Type of " .
     if (defined($opt_d)) {
@@ -1067,12 +1087,10 @@ sub print_3($)
 # cgi_form - print the CGI HTML form
     #
 # usage:
-#	\$q	CGI object
-#
-# returns:
-#	$num	input value
+#	$q	CGI object
+#	\$num	input value
 
-sub cgi_form(\$\$)
+sub cgi_form($\$)
 # cgi_form - print the CGI/HTML form
     my ($q, $num) = @_;		# CGI object
 
@@ -1085,7 +1103,7 @@ sub cgi_form()
     # radio label sets
     #
     my %input_label = (
-	"digit" => " Decimal digits"
+	"number" => " Just a number",
 	"exp" => " Power of 10",
 	"latin" => " Latin power (1000^number)"
     );
@@ -1274,6 +1292,83 @@ sub cgi_form()
     <BR>
     <A HREF="http://www.isthe.com/chongo/index.html">chongo</A>
     &lt; was here &gt;
+    <STRONG>/\\oo/\\</STRONG>
+    </BLOCKQUOTE>
+
+# big_error - print a too big error and exit
+#
+# usage:
+#	$q	CGI object
+#
+sub big_error($)
+}
+    my $cgi = $_[0];	# get arg
+
+	print $cgi->p, "\n";
+	print "</PRE>\n</BLOCKQUOTE>\n";
+	  "&nbsp;&nbsp;We have imposed an arbitrary size limit on",
+
+    # print too big error
+    #
+    print $cgi->p,
+	  "on the size of the number we would print.  Otherwise someone\n",
+	  "could enter a number such as <TT>1e1000000000</TT> causing\n",
+	  "the server to flood the network with lots of data ... assuming\n",
+	  "we had the memory to form the print buffer in the first place!\n",
+	  $cgi->p,
+	  "You have 3 choices:\n",
+	  "<ol>\n<li> You may enter a number that is\n",
+	  "is no more than $too_big characters in length.\n",
+	  "<li> You may raise 10 to a power where the exponent is\n",
+	  "no more than $too_big characters in length.\n",
+	  "<li> You may download the\n",
+	  $cgi->a({'href' => "/chongo/number/number"},
+		  "number.pl perl script"),
+	  " and run it yourself.<br>\n",
+	  " If you do download the perl program, you should rename it",
+	  " <b>number.pl</b> when you save it.\n",
+	  $cgi->b("number.cgi"),
+	  $cgi->p,
+	  "The ",
+	  $cgi->a({'href' => "/chongo/number/number"},
+		  "number.pl perl script"),
+	  " reads a number from standard input and has no size limit.<br>\n",
+	  " Try <b>./number -h</b> for more information.",
+	  $cgi->p,
+	  "NOTE: &nbsp;Numbers entered in scientific notation are currently\n",
+	  "expanded into the full decimal form prior to any \n",
+	  "$too_big character length checking.\n",
+	  $cgi->p,
+	  $cgi->hr,
+	  " operates as it is doing now with size limits.",
+    &trailer(1);
+	  $cgi->b("number"),
+	  " reads a number from standard input, has no size limits",
+	  "and does not perform any CGI/HTML actions.",
+	  "</ol>\n",
+# error - report an error in HTML or die form
+    trailer(1);
+# usage:
+#	$q	CGI object
+}
+
+sub error($)
+# err - report an error in CGI/HTML or die form
+    my ($cgi, $msg) = @_;	# get args
+# given:
+#	$msg	the message to print
+#
+    if ($html == 0) {
+	die $msg;
+    #
+    if ($html == 0 || $cgi == 0) {
+    # issue an error message in HTML
+	    print "Content-type: text/plain\n\n";
+    print $cgi->p,
+	  $cgi->b("SORRY! "),
+	  $msg;
+    &trailer(0);
+	print $cgi->p, "\n";
 	print $cgi->hr, "\n";
 	print $cgi->p, "\n";
     }
