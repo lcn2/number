@@ -7,6 +7,7 @@
 SHELL=/bin/sh
 MODE=0555
 DESTDIR=/usr/local/bin
+WWW=/usr/local/ns-home/docs/chongo/number
 SCRIPTS= number
 
 all: ${SCRIPTS}
@@ -18,6 +19,7 @@ number: number.pl
 
 install: all
 	install -F ${DESTDIR} -m ${MODE} ${SCRIPTS}
+	install -F ${WWW} -m 0755 number.pl
 
 clean:
 
