@@ -1,15 +1,38 @@
-#!/bin/make
-#  @(#} $Revision: 1.13 $
-#  @(#} RCS control in /usr/local/src/cmd/number/Makefile
+#!/usr/bin/make
 #
 # number - number makefile
+#
+# @(#) $Revision$
+# @(#) $Id$
+# @(#) $Source$
+#
+# Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
+#
+# Permission to use, copy, modify, and distribute this software and
+# its documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright, this permission notice and text
+# this comment, and the disclaimer below appear in all of the following:
+#
+#       supporting documentation
+#       source copies
+#       source works derived from this source
+#       binaries derived from this source or from derived source
+#
+# LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+# EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
 
-SHELL=/bin/sh
-DESTDIR=/usr/local/bin
-WWW=/usr/local/ns-home/docs/chongo/number
-SCRIPTS= number.cgi.txt number.cgi
+SHELL= /bin/sh
+DESTDIR= /usr/local/bin
+WWWROOT= /usr/local/ns-home/docs
+WWW= ${WWWROOT}/chongo/number
+TARGETS= number.cgi.txt number.cgi number
 
-all: ${SCRIPTS}
+all: ${TARGETS}
 
 number.cgi.txt: number.pl
 	rm -f number.cgi.txt
@@ -19,7 +42,11 @@ number.cgi.txt: number.pl
 number.cgi: number.pl
 	rm -f number.cgi
 	cp number.pl number.cgi
-	chmod 0555 number.cgi
+
+number: number.pl
+	rm -f number
+	cp number.pl number
+	chmod 0555 number
 
 # NOTE: The cgi-bin/Makefile forms a symlink between the file:
 #
@@ -27,20 +54,21 @@ number.cgi: number.pl
 #
 # and our installation file:
 #
-#	${DESTDIR}/number.cgi
+#	${WWW}/number.cgi
 #
-# So thus we do NOT need to install number.pl into the cgi-bin directory.
+# So thus we do NOT need to install number.pl into the cgi-bin directory
+# if we do not have the ${WWW} directory.
 #
 install: all
 	-@if [ -d ${WWW} ]; then \
-	    echo "install -m 0644 number.cgi.txt ${WWW}"; \
+	    echo "	install -m 0644 number.cgi.txt ${WWW}"; \
 	    install -m 0644 number.cgi.txt ${WWW}; \
-	    echo "install -m 0755 number.cgi ${WWW}"; \
+	    echo "	install -m 0755 number.cgi ${WWW}"; \
 	    install -m 0755 number.cgi ${WWW}; \
 	fi
-	install -m 0555 ${SCRIPTS} ${DESTDIR}
+	install -m 0555 number ${DESTDIR}
 
 clean:
 
 clobber: clean
-	rm -f number.cgi.txt number.cgi
+	rm -f ${TARGETS}
