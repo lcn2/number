@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.18 $
+#  @(#} $Revision: 2.19 $
 #
 # number - print the English name of a number of any size
 #
@@ -92,7 +92,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.18 $';
+my $version = '$Revision: 2.19 $';
 
 # CGI / HTML variables
 #
@@ -143,6 +143,14 @@ my $big_bias = 1000;		# a big bias (should be < 2^31).
 # misc BigInt
 #
 my $zero = Math::BigInt->new("0");
+my $one = Math::BigInt->new("1");
+my $two = Math::BigInt->new("2");
+my $three = Math::BigInt->new("3");
+my $eight = Math::BigInt->new("8");
+my $neg_eight = Math::BigInt->new("-8");
+my $ten = Math::BigInt->new("10");
+my $hundred = Math::BigInt->new("100");
+my $five_hundred = Math::BigInt->new("500");
 
 # To help pronounce values we put $dash between word parts
 #
@@ -766,15 +774,24 @@ sub print_number($$$$$$$)
 	}
 	$leadlen = $wholelen;
 	if ($wholelen > 3) {
+	    my $tmp;
+
 	    # account for separators
 	    #
 	    # Some BigInt implementations issue uninitialized
 	    # warnings internal to the BigInt code with the
 	    # division below.  We block these bogus warnings.
+	    # We also reform the quotient to work around a bdiv bug
+	    # that exists in some implementations.
 	    #
+	    # $leadlen += ($wholelen-1)/3;
+	    #
+	    $tmp = $wholelen->bsub($one);
 	    $^W = 0;
-	    $leadlen += ($wholelen-1)/3;
+	    $tmp = $tmp->bdiv($three);
 	    $^W = $warn;
+	    $tmp = Math::BigInt->new($tmp);
+	    $leadlen = $tmp->badd($leadlen);
 	}
 	if ($neg) {
 	    # account for - sign
@@ -918,12 +935,13 @@ sub print_number($$$$$$$)
 		# Avoid using a BigInt in an ``x repeat'' context,
 		# it doesn't work well in some Perl v5 versions.
 		#
-		while ($bias < -8) {
+		while ($bias->bcmp($neg_eight) < 0) {
 		    print "0" x 8;
 		    $offset += 8;
-		    $bias += 8;
+		    $bias = $bias->badd($eight);
 		}
-		while ($bias++ < 0) {
+		while ($bias->is_negative) {
+		    $bias = $bias->badd($one);
 		    print "0";
 		    $offset++;
 		}
@@ -1160,7 +1178,7 @@ sub american_kilo($)
     #
     } else {
 	$big = Math::BigInt->new($power);
-	latin_root($big-1, $zero);
+	latin_root($big->bsub($one), $zero);
 	print "llion";
     }
 }
@@ -1213,11 +1231,14 @@ sub european_kilo($)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
+	# We also reform the quotient to work around a bdiv bug
+	# that exists in some implementations.
 	#
 	$big = Math::BigInt->new($power);
 	$^W = 0;
-	($big, $mod2) = $big->bdiv("2");
+	($big, $mod2) = $big->bdiv($two);
 	$^W = $warn;
+	$big = Math::BigInt->new($big);
 
 	# Even roots use "llion"
 	#
@@ -1282,14 +1303,17 @@ sub power_of_ten($$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# division and mod below.  We block these bogus warnings.
+	# We also reform the quotient to work around a bdiv bug
+	# that exists in some implementations.
 	#
 	$^W = 0;
-	($biasmillia, $biasmod3) = $bias->bdiv("3");
+	($biasmillia, $biasmod3) = $bias->bdiv($three);
 	$^W = $warn;
+	$biasmillia = Math::BigInt->new($biasmillia);
 	if ($biasmod3 == 1) {
-	    $big *= 10;
+	    $big = $big->bmul($ten);
 	} elsif ($biasmod3 == 2) {
-	    $big *= 100;
+	    $big = $big->bmul($hundred);
 	}
 
 	# under -l, we deal with powers of 1000 above 1000
@@ -1322,10 +1346,13 @@ sub power_of_ten($$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
+	# We also reform the quotient to work around a bdiv bug
+	# that exists in some implementations.
 	#
 	$^W = 0;
 	($kilo_power, $mod3) = $big->bdiv(3);
 	$^W = $warn;
+	$kilo_power = Math::BigInt->new($kilo_power);
 	$biasmillia = $zero;
 
 	# print the multiplier name
@@ -1356,7 +1383,7 @@ sub power_of_ten($$$)
     } elsif ($system eq 'American') {
 
 	print " ";
-	latin_root($kilo_power-1, $biasmillia);
+	latin_root($kilo_power->bsub($one), $biasmillia);
 	print "llion";
 
     # print the name based on the European name system
@@ -1371,13 +1398,16 @@ sub power_of_ten($$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# division and mod below.  We block these bogus warnings.
+	# We also reform the quotient to work around a bdiv bug
+	# that exists in some implementations.
 	#
 	$^W = 0;
 	if (($kilo_power % 2) == 0) {
 
 	    # kilo_power is even so kilo_power,biasmillia is even
 	    #
-	    $kilo_power /= 2;
+	    $kilo_power = $kilo_power->bdiv($two);
+	    $kilo_power = Math::BigInt->new($kilo_power);
 	    $mod2 = 0;
 
 	} else {
@@ -1387,7 +1417,7 @@ sub power_of_ten($$$)
 	    # biasmillia by one.  This results in an even number.
 	    #
 	    if ($biasmillia > 0) {
-		$kilo_power *= 500;
+		$kilo_power = $kilo_power->bmul($five_hundred);
 		--$biasmillia;
 		$mod2 = 0;
 
@@ -1395,7 +1425,9 @@ sub power_of_ten($$$)
 	    # the "lliard" roots
 	    #
 	    } else {
-		$kilo_power = ($kilo_power-1) / 2;
+		$kilo_power = $kilo_power->bsub($one);
+		$kilo_power = $kilo_power->bdiv($two);
+		$kilo_power = Math::BigInt->new($kilo_power);
 		$mod2 = 1;
 	    }
 	}
@@ -1483,10 +1515,13 @@ sub print_name($$$$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
+	# We also reform the quotient to work around a bdiv bug
+	# that exists in some implementations.
 	#
 	$^W = 0;
-	($bias, $bias_mod3) = $bias->bdiv("3");
+	($bias, $bias_mod3) = $bias->bdiv($three);
 	$^W = $warn;
+	$bias = Math::BigInt->new($bias);
 
 	# ``move`` the $bias % 3 value onto the end of integer
 	#
