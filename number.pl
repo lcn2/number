@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.33 $
+#  @(#} $Revision: 1.40 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -72,13 +72,11 @@
 use strict;
 use Math::BigInt;
 use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
-#use Getopt::Std;
 use Getopt::Long;
-# CGI requirements
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.33 $';
+my $version = '$Revision: 1.40 $';
 
 # GetOptions argument
 #
@@ -94,12 +92,26 @@ my $warn = $^W;
 # very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
-my $big_input = "5000"; # too many input digits for the web
-my $big_bias = 1000000; # too much output for the web (must be < 2^31)
+my $big_input = 10000;		# too many input digits for the web
+my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
+my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
+
+# We have optimizatins that allow us to treat a large power of 10 bias
+# (due to conversion of a very large scientific notation number) in
+# a different fastion from a small bias.
+#
+# This value must be able to be be represented as an integer (say < 2^31).
+# In practive this should be even smaller.
+#
+my $big_bias = 1000;		# a big bias (should be < 2^31).
 
 # misc BigInt
 #
 my $zero = Math::BigInt->new("0");
+my $googol10;		# 10^1000
+my $googol;		# 10^100
+my $ten_to_ten;		# 10^10
+my $ten;		# 10^1
 
 # To help pronounce values we put $dash between word parts
 #
@@ -245,8 +257,8 @@ MAIN:
 	exit(0);
 	    &error("-c conflicts with either -l and/or -p");
 
-	    &error("You may only print decimal digits when the input is " .
-	        "just a number.");
+	    &error("You may only print decimal digits when the <I>Type of " .
+	        "input</I> is <B>just a number</B>.");
     if ($opt_c && ($opt_l || $opt_p)) {
 	if ($html == 0) {
 	    err("-c conflicts with either -l and/or -p");
@@ -282,6 +294,12 @@ MAIN:
     if (defined $ARGV[0]) {
 	$num = $ARGV[0];
     } elsif ($html == 0) {
+	# snarf the number from the entire stdin
+	#
+	$/ = undef;
+	&big_error();
+    }
+
     # Web firewall
     #
     if ($html && length($num) > $big_input) {
@@ -308,9 +326,6 @@ MAIN:
 	    $num = "0";
 	} else {
 	    # strip off leading 0's
-    if ($html == 1 && length($num) >= $big_input) {
-	&big_error();
-    }
 	    $num =~ s/^0+//;
 	&error("Numbers may have only one decimal $point.");
     }
@@ -462,7 +477,7 @@ sub exp_number($$$)
     # we have something like -3.5e70 or .5e50 or 4E50 or 4.E-49
     # break it apart into before and after the E
     #
-	$$bias = Math::BigInt->new("0");
+    ($lead, $expstr) = split(/[Ee]/, $num);
     $exp = Math::BigInt->new($expstr);
 
     # If we have a 0 exponent, just return the lead with a zero bias
@@ -497,7 +512,7 @@ sub exp_number($$$)
 	    $frac = "";
 
 	# we have fewer exp than $frac digits, so we will move
-	    $$bias = 0;
+	# only part of the $frac to the $int side
 	#
 	} else {
 	    # we use $expstr because we know that it is a small value
@@ -526,7 +541,7 @@ sub exp_number($$$)
 	    $int = "0";
 
 	# we have fewer exp than $int digits, so we will move
-	    $$bias = 0;
+	# only part of the $int to the $frac side
 	#
 	} else {
 	    # we use $expstr because we know that it is a small value
@@ -558,9 +573,10 @@ sub print_number($$\$$\$$$)
 #	$linelen	max line length (0 => no limit)
 #	$bias		power of 10 bias (as BigInt) during de-sci
 #			    notation conversion
-    my $intlen;		# length of the integer part without bias
-    my $fractlen;	# length of the fractional part
+#
+sub print_number($$$$$$$)
 {
+    my $fulllen;	# aproximate length of the input
     my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
     my $wholelen;	# length of the integer part as modified by bias
     my $intlen = 0;	# length of the integer part without bias
@@ -578,8 +594,22 @@ sub print_number($$\$$\$$$)
     }
 
     # watch out for large a bias
-    if ($nonint_bias && $html == 1) {
-	&big_error();
+    #
+    # If $bias is larger than $big_bias, then we cannot just treat
+    # it like an integer.  In the case of the web, we bail.  In
+    # the case of non-web output, we have to perform BigInt processing.
+    #
+    $nonint_bias = 1 if ($bias < -$big_bias || $bias > $big_bias);
+
+    # determine if the web limits will apply
+    #
+    if (defined($$integer)) {
+	$intlen = length($$integer);
+    }
+    if (defined($$fract)) {
+	$fractlen = length($$fract);
+	    &big_error();
+    if ($html) {
 	$fulllen = $bias->babs;
 	$fulllen += $fractlen;
 	$fulllen += int($intlen*4/3);
@@ -653,7 +683,6 @@ sub print_number($$\$$\$$$)
 	}
 
     # If we have a line length, we need to insert newlines after
-	$intlen = length($$integer);
     # the separators to keep within the max line length.
     #
     } else {
@@ -661,6 +690,11 @@ sub print_number($$\$$\$$$)
 	# determine the length of the integer part of the number
 	#
 	$wholelen = Math::BigInt->new($intlen);
+	if ($bias > 0) {
+	    $wholelen += $bias;
+	}
+	$leadlen = $wholelen;
+	if ($wholelen > 3) {
 	    # account for separators
 	    #
 	    # Some BigInt implementations issue uninitialized
@@ -673,6 +707,10 @@ sub print_number($$\$$\$$$)
 	}
 	if ($neg) {
 	    # account for - sign
+	    ++$leadlen;
+	}
+
+	# print enough the leading whitespace so that the
 	# decimal point/comma will line up at the end of a line
 	#
 	# Some BigInt implementations issue uninitialized
@@ -697,6 +735,11 @@ sub print_number($$\$$\$$$)
 		$col = 1;
 	    } else {
 		print "-";
+	    }
+	}
+
+	# output the leading digits before the first separator
+	#
 	if ($bias > 0) {
 
 	    # Some BigInt implementations issue uninitialized
@@ -818,7 +861,6 @@ sub print_number($$\$$\$$$)
 		#
 		if ($offset <= $linelen) {
 		    print substr($$fract, 0, $linelen-$offset), "\n";
-		$fractlen = length($$fract);
 		} else {
 		    print "\n";
 		}
@@ -829,7 +871,6 @@ sub print_number($$\$$\$$$)
 		    print substr($$fract, $i, $linelen), "\n";
 		}
 
-		$fractlen = length($$fract);
 	    # non-biased printing of fract digits
 	    #
 	    } else {
@@ -866,9 +907,9 @@ sub latin_root($$)
     my $numstr;	# $num as a string
     my @set3;	# set of 3 digits, $set3[0] is the most significant
     my $d3;	# 3rd digit in a set of 3
-    my $millia_cnt;	# number of millia's to print
-    my $millia_cnt_str;	# $millia_cnt as a string
-    my $nonint_millia = 0;    # 1 => $millia is very large, process with care
+    my $d2;	# 2nd digit in a set of 3
+    my $d1;	# 1st digit in a set of 3
+    my $l3;	# latin name for 3rd digit in a set of 3
     my $l2;	# latin name for 2nd digit in a set of 3
     my $l1;	# latin name for 1st digit in a set of 3
     my $len;	# number of sets of 3 including the final (perhaps partial) 3
@@ -884,9 +925,6 @@ sub latin_root($$)
     }
 
     # watch out for large a bias
-    if ($nonint_millia && $html == 1 && !$opt_m) {
-	&big_error();
-    }
     #
     # If $bias is larger than $big_bias, then we cannot just treat
     # it like an integer.  In the case of the web, we bail.  In
@@ -925,6 +963,10 @@ sub latin_root($$)
 
     # process each set of 3 digits up to but not
     # including the last set of 3
+    #
+    for ($i=0; $i < $len; ++$i) {
+
+	# keep track of the number of millia's we might print
 	#
 	if ($millia_cnt > 0) {
 	    # Some BigInt implementations issue uninitialized
@@ -1091,6 +1133,10 @@ sub european_kilo($)
 
     # Use latin_root to determine the root while taking care to
     # deterine of we will end in "llion" (even big,biasmillia combo)
+    # or end in "lliard" (odd big,biasmillia combo).
+    #
+    } else {
+
 	# divide $power by 2 and note if it was even or odd
 	#
 	# Some BigInt implementations issue uninitialized
@@ -1128,6 +1174,8 @@ sub power_of_ten(\$$$)
 sub power_of_ten($$$)
 {
     my ($power, $system, $bias) = @_;	# get args
+    my $bias_big;			# aprox power of 10 ($bias+$big)
+    my $big;				# $power as a BigInt
     my $mod3;				# $big mod 3
     my $mod2;				# $kilo_power mod 2
     my $biasmod3;			# bias mod 3
@@ -1139,18 +1187,6 @@ sub power_of_ten($$$)
     #
     if ($bias < 0) {
 	err("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
-    # increase the power based on bias mod 3
-    #
-    $^W = 0;
-    $biasmod3 = $bias->bmod(3);
-    $biasmillia = ($bias - $biasmod3) / 3;
-    $^W = $warn;
-    if ($biasmod3 == 1) {
-	$big *= 10;
-    } elsif ($biasmod3 == 2) {
-	$big *= 100;
-    }
-
     }
 
     # Convert $$power arg into BigInt format
@@ -1158,9 +1194,31 @@ sub power_of_ten($$$)
     $big = Math::BigInt->new($$power);
 
     # convert the power of 10 into a multiplier and a power of 1000
+    #
+    # If we gave -l, then we will assume that we are dealing with
+    # a power of 1000 instead of a power of 10.
+	    &big_error();
+    if ($opt_l) {
+
+	# Web firewall
+	#
+	if ($html && !$opt_m && $bias > $big_latin_power) {
+	    big_err();
+	}
+
+	# increase the power based on bias mod 3
+	#
+	# Some BigInt implementations issue uninitialized
+	# warnings internal to the BigInt code with the
+	# division and mod below.  We block these bogus warnings.
+	#
+	$^W = 0;
+	($biasmillia, $biasmod3) = $bias->bdiv("3");
+	$^W = $warn;
 	if ($biasmod3 == 1) {
 	    $big *= 10;
-	$kilo_power = $big + 1;
+	$kilo_power = $big->bnorm;
+	++$kilo_power;
 	    $big *= 100;
 	}
 
@@ -1168,13 +1226,30 @@ sub power_of_ten($$$)
 	#
 	$kilo_power = $big;
 
+	# under -l, our multiplier name is always one
+	#
+	print "one";
+
+		&error("Scientific notation is now support for powers of 10\n" .
+		  "at this time. Try using <B>Latin powers</B> or enter the\n" .
+		       "number without scientific notation.");
+	#
+		&error("Scientific notation is now support for powers of 10\n" .
+		       "at this time.  Try using Latin powers or enter the\n" .
+		       "number without scientific notation.");
+		  " the\nnumber without scientific notation.");
+	    } else {
+		err("Scientific notation is not supported for powers of" .
 		       "10\n" .
 		       "of 10 at this time.  Try using Latin powers or enter" .
+		       " the\nnumber without scientific notation.");
+	    }
+	}
+
 	# convert power of 10 into power of 1000
 	#
-	$mod3 = $big->bmod(3);
-	$kilo_power = ($big - $mod3) / 3;
 	# Some BigInt implementations issue uninitialized
+	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
 	#
 	$^W = 0;
@@ -1187,11 +1262,6 @@ sub power_of_ten($$$)
 	if ($mod3 < 1) {
 	    print "one";
 	} elsif ($mod3 == 1) {
-    # To avoid passing the BigInt issue onto &american_kilo() and
-    # &european_kilo() we will to our own suffix generation here
-    # and bypass them.  Unfortunatly we must duplicate code again
-    # as a result.
-
 	    print "ten";
 	} else {
 	    print "one hundred";
@@ -1221,6 +1291,10 @@ sub power_of_ten($$$)
     # print the name based on the European name system
     #
     } else {
+
+	# divide $kilo_power by 2 taking into account any $biasmillia
+	#
+	# We must determine if the kilo_power and biasmillia combination
 	# is even or odd.
 	#
 	# Some BigInt implementations issue uninitialized
@@ -1299,9 +1373,6 @@ sub print_name($$$$$)
     my $i;
 
     # watch out for large a bias
-    if ($nonint_bias && $html == 1) {
-	&big_error();
-    }
     #
     # If $bias is larger than $big_bias, then we cannot just treat
     # it like an integer.  In the case of the web, we bail.  In
@@ -1330,6 +1401,10 @@ sub print_name($$$$$)
     # either american_kilo() or european_kilo().
     #
     # We any bias % 3 and 'move' to the integer by adding 1 or 2 0's
+    # to the end of it.
+    #
+    if ($bias > 0) {
+
 	# compute $bias % 3 and make $bias a multiple of 3
 	#
 	# Some BigInt implementations issue uninitialized
@@ -1376,7 +1451,7 @@ sub print_name($$$$$)
 	}
     }
 
-	if (defined $opt_o) {
+    # process all of the the remaining full sets of 3 (if any)
     #
     while (--$cnt3 >= 0) {
 	$set3 = substr($intstr, $indx, 3);
@@ -1406,7 +1481,7 @@ sub print_name($$$$$)
 
     # print after the decimal point if needed
     #
-	if (!defined $opt_o) {
+    if (defined($$fract)) {
         my $len;	# length of current line
 	my $line;	# current line being formed
 
@@ -1419,7 +1494,7 @@ sub print_name($$$$$)
 	} else {
 	    print "\n";
 	    $len = 0;
-	    if (defined $opt_o) {
+	#
 		print " ";
 	while ($bias++ < 0) {
 		print "\n";
@@ -1430,7 +1505,7 @@ sub print_name($$$$$)
 		    print "\n$zero";
 		    $len = $diglen - 1;
 		}
-	    if (defined $opt_o) {
+	# list off the digits
 		print " ";
 	for ($i=0; $i < length($$fract); ++$i) {
 		print "\n";
@@ -1738,47 +1813,70 @@ sub big_error()
 	  $cgi->b("SORRY!"),
 	  "&nbsp;&nbsp;We have imposed an arbitrary size limit on",
 	  " the output of this CGI program.",
-	  "the print buffer in the first place!\n",
-	  $cgi->p;
+	  $cgi->p,
+	  "Even though there is no limit on the size of\n",
+	  "of number that the algorithm can name, we had to put some limit\n",
+	  "on the amount of output we will print.  Otherwise someone\n",
+	  "could enter a huge number such as causing the server to flood the\n",
+	  "The arbitrary size limit as aproximately as follows:\n",
+	  "the print buffer in the first place!\n";
+
+	  "<LI> Latin power scientific notation exponent &lt; ",
+    #
+    print $cgi->p,
+		"keep <I>exp</I> &lt; ", $big_latin_power,
+	  "<UL>\n",
+	  "<LI> Decimal expanstion limited to about $big_decimal digits\n",
+	  "<LI> Latin power scientific notation exponent &lt; ",
 		$big_latin_power, " when using non-compact millia style<BR>\n",
 	        "(i.e., when entering <I>digits</I><B>e</B><I>exp</I> ",
 		"keep <I>exp</I> &lt; ", $big_latin_power,
 		" or use compact <I>millia^7...</I> Millia style)\n",
-	print "Instead of printing the digits of a number, you might\n",
-	      "try printing the name instead.\n";
-    } elsif (!$opt_m) {
-	print "You might try turning on the\n",
-	      $cgi->b("power"),
-	      " Millia style.\n",
+	  "<LI> Decimal expansion limited to about $big_decimal digits\n",
+	  "</UL>\n";
+
+    # print a suggestion
+    #
+    if ($opt_c) {
+	print $cgi->p,
+	      "You might try rasinig ",
+	      "try printing the ",
+	      " (1000^(latin_power+1)) instead of just powers of 10.\n";
+	      " instead.\n";
+    } elsif ($opt_p) {
+	print $cgi->p,
+	      "You might try rasing ",
+	      $cgi->b("Latin powers"),
 	      " (1000^latin_power) instead of just powers of 10.\n";
     } elsif ($opt_l && !$opt_m) {
 	print $cgi->p,
+	      "You might try turning on the\n",
+	      $cgi->b("compact form"),
+	      " of the Millia style (e.g., millia^7).\n",
 	      "Often that reduces the amount of output enough\n",
-	  "Of course you can also give a smaller number.\n",
-	  $cgi->p;
-
-    print "If none of those options are what you want/need, you can\n",
+	      "to drop under the arbitrary size limit.\n";
     }
 
     # tell them about running it themselves
-	  "<li> You may download the\n",
+    #
 	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
 	  "If none of those options are what you want/need, you can\n",
 	  "run this program on your own computer in the non-CGI mode.\n",
-	  " Save it as either the filename ",
-	  $cgi->br,
+	  "The non-CGI mode has no internal size restrictions and is\n",
+	  "limited only by time and your systems resources.\n",
+	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
+	  $cgi->a({'href' => "/chongo/tech/math/number/number"},
+		  "source"),
 	  " and run it yourself.\n",
 	  $cgi->p,
 	  "If you do download the\n",
 	  $cgi->a({'href' => "/chongo/tech/math/number/number"},
 		  "source"),
 	  " save it as either the filename ",
-	  " operates as it is doing now.",
-	  $cgi->br,
+	  $cgi->b("number.cgi"),
 	  " or ",
 	  $cgi->b("number"),
 	  ".",
-	  $cgi->br,
 	  " The CGI script ",
 	  $cgi->b("number.cgi"),
 	  " operates as it is doing now with size limits.",
