@@ -1,6 +1,6 @@
 #!/usr/bin/perl -wT
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.26 $
+#  @(#} $Revision: 1.27 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -78,7 +78,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.26 $';
+my $version = '$Revision: 1.27 $';
 
 # GetOptions argument
 #
@@ -1193,14 +1193,14 @@ sub cgi_form()
 			  'labels' => \%system_label,
 			  'default' => 'usa'),
 	  $cgi->br,
-	  "Millia styie:",
+	  "Millia style:",
 	  "&nbsp;" x 8,
 	  $cgi->radio_group('name' => 'millia',
 			  'values' => ['dup', 'power'],
 			  'labels' => \%millia_label,
 			  'default' => 'dup'),
 	  $cgi->br,
-	  "Dash styie:",
+	  "Dash style:",
 	  "&nbsp;" x 10,
 	  $cgi->radio_group('name' => 'dash',
 			  'values' => ['nodash', 'dash'],
