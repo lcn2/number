@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.17 $
-# @(#) $Id: Makefile,v 1.17 1999/10/11 13:22:23 chongo Exp chongo $
+# @(#) $Revision: 1.18 $
+# @(#) $Id: Makefile,v 1.18 1999/10/22 10:03:01 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -62,8 +62,10 @@ install: all
 	    ${INSTALL} -m 0555 number.cgi ${CGIBIN}; \
 	fi
 	-@if [ -d ${EXTCGIBIN} ]; then \
-	    echo "	${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}"; \
+	    echo "${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}"; \
 	    ${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}; \
+	    echo "${INSTALL} -m 0644 number.cgi ${EXTCGIBIN}/number.cgi.txt"; \
+	    ${INSTALL} -m 0644 number.cgi ${EXTCGIBIN}/number.cgi.txt; \
 	fi
 
 clean:
