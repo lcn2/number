@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.21 $
+#  @(#} $Revision: 2.22 $
 #
 # number - print the English name of a number of any size
 #
@@ -41,7 +41,7 @@
 #
 # for examples/help as well as the latest version of this code.
 #
-# Copyright (c) 1998-2003 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2005 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -91,7 +91,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.21 $';
+my $version = '$Revision: 2.22 $';
 
 # CGI / HTML variables
 #
@@ -1069,19 +1069,12 @@ sub latin_root($$)
 
 	# extract digits in the current set of 3
 	#
-	# The 100's place is a little bit tricky.  Normally the hundred names
-	# end in a ``t'', however when we are dealing with the last set of
-	# 3 and there is no tens or ones, then the ''t'' is thought to belong
-	# to the final ``tillion'' or ``tillard''.
-	#
 	$d1 = substr($set3[$i], 2, 1);
 	$l1 = (($d1 > 0) ? $l_unit[$d1] . $dash : "");
 	$d2 = substr($set3[$i], 1, 1);
 	$l2 = (($d2 > 0) ? $l_ten[$d2] . $dash : "");
 	$d3 = substr($set3[$i], 0, 1);
-	$l3 = (($d3 > 0) ? $l_hundred[$d3] .
-			   (($i == $len-1 && $d1 == 0 && $d2 == 0) ? "" : "t") .
-			   $dash : "");
+	$l3 = (($d3 > 0) ? $l_hundred[$d3] .  $dash : "");
 
 	# print the 3 digits
 	#
