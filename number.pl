@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.12 $
+#  @(#} $Revision: 1.13 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -70,7 +70,7 @@ use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.12 $';
+my $version = '$Revision: 1.13 $';
 
 # Warning state
 my $warn = $^W;
@@ -611,17 +611,25 @@ sub latin_root($$)
 
 	# do nothing if 000
 	#
+	if ($set3[$i] == 0) {
+	    next;
+	}
+
+	# extract digits in the current set of 3
 	#
 	# The 100's place is a little bit tricky.  Normally the hundred names
 	# end in a ``t'', however when we are dealing with the last set of
 	# 3 and there is no tens or ones, then the ''t'' is thought to belong
 	# to the final ``tillion'' or ``tillard''.
-	$l3 = (($d3 > 0) ? $l_hundred[$d3] . $dash : "");
+	#
+	$d1 = substr($set3[$i], 2, 1);
+	$l1 = (($d1 > 0) ? $l_unit[$d1] . $dash : "");
 
 	$l2 = (($d2 > 0) ? $l_ten[$d2] . $dash : "");
 	$d3 = substr($set3[$i], 0, 1);
-	# However just 001 in all but the lowest set of 3
-	# results in no output do that we wind up with
+	$l3 = (($d3 > 0) ? $l_hundred[$d3] .
+			   (($i == $len-1 && $d1 == 0 && $d2 == 0) ? "" : "t") .
+			   $dash : "");
 
 	# print the 3 digits
 	#	millia-tillion
