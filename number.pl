@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.11 $
+#  @(#} $Revision: 2.12 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,7 +85,7 @@ use Getopt::Long;
 use CGI;
 
 # version
-my $version = '$Revision: 2.11 $';
+my $version = '$Revision: 2.12 $';
 
 # GetOptions argument
 #
@@ -1458,10 +1458,11 @@ sub print_name($$$$$)
     $cnt3 = int(($intlen+2)/3);
     $millia = Math::BigInt->new($bias);
 
-	$fulllen = $bias->babs;
-	$fulllen += $fractlen;
-	$fulllen += $intlen;
-	if ($fulllen < -$big_name || $fulllen > $big_name) {
+    # determine if the web limits will apply
+    #
+    if (defined($$fract)) {
+	$fractlen = length($$fract);
+    }
 	    big_error();
 	$fulllen = abs($fractlen) + abs($intlen);
 	if ($bias < 0) {
