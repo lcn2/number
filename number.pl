@@ -1,18 +1,18 @@
 #!/usr/bin/perl
 #!/usr/bin/perl -w
-#  @(#} $Revision: 1.7 $
+#  @(#} $Revision: 1.8 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-d] [-m] [-c [-l]] [-e] [-h]
+#	number [-p] [-d] [-m] [-c] [-l] [-e] [-h]
 #
 #	-p	input is a power of 10
 #	-d	add dashes to help with pronunciation
 #	-m	output name in a more compact exponentation form
 #	-c	output number in comma/dot form
-#	-l	when used with -c, output number on a single line
+#	-l	output number on a single line
 #	-e	use European instead of American name system
 #	-h	print a help message only
 #
@@ -63,7 +63,7 @@ use vars qw($opt_p $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.7 $';
+my $version = '$Revision: 1.8 $';
 
 # Warning state
 my $warn = $^W;
@@ -122,7 +122,7 @@ my @last_100 = ("", qw(
 	  deci
 	  un-deci duo-deci tres-deci
 	  quattuor-deci quin-quedeci se-deci
-	  septen-deci duode-viginti unde-viginti
+	  septen-deci octo-deci novem-deci
 	  viginti
 	  viginti-mi viginti-bi viginti-tri
 	  viginti-quadri viginti-quinti viginti-sexti
@@ -175,7 +175,7 @@ my @twenty = qw(ten eleven twelve thirteen fourteen
 
 # usage and help
 #
-my $usage = "number [-p] [-d] [-m] [-c [-l]] [-e] [-h]";
+my $usage = "number [-p] [-d] [-m] [-c] [-l] [-e] [-h]";
 my $help = qq{Usage:
 
     $0 $usage
@@ -184,7 +184,7 @@ my $help = qq{Usage:
 	-d	add dashes to help with pronunciation
 	-m	output name in a more compact exponentation form
 	-c	output number in comma/dot form
-	-l	when used with -c, output number on a single line
+	-l	output number on a single line
 	-e	use European instead of American name system
 	-h	print a help message only
 
@@ -221,10 +221,14 @@ MAIN: {
     my $num;		# the number with ,'s removed
     my $neg;		# 1 => number if < 0
 
+    # setup
+    #
+    select(STDOUT);
+    $| = 1;
+
     # parse args
 	    print $cgi->p, "\n";
-    if (!getopts('pdmcleh') || 
-	(defined($opt_l) && !defined($opt_c))) {
+    if (!getopts('pdmcleh')) {
 	die "usage: $0 $usage\n";
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
@@ -360,7 +364,7 @@ MAIN: {
 	if ($opt_o) {
 	    print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
 	} else {
-	&print_name($neg, $integer, $fract, $system);
+	&print_name($neg, \$integer, \$fract, $system);
 	}
 
     # If we are doing CGI/HTML stuff, print the trailer
@@ -417,7 +421,7 @@ sub exp_number($$$)
 
 	    # add on more 0's if and as needed
 	    #
-	    $int .= "0" x $exp;
+	    $int .= '0' x $exp;
 
 	    # move all $frac digits to the left of decimal point/comma
 	    #
@@ -452,7 +456,7 @@ sub exp_number($$$)
 
 	    # add on more 0's if and as needed
 	    #
-	    $frac = ("0" x $exp) . $frac;
+	    $frac = ('0' x $exp) . $frac;
 
 	    # move all $int digits to the right of decimal point/comma
 	    #
@@ -819,7 +823,7 @@ sub european_kilo($)
 	}
 # usage:
 }
-#	$system	the number system ('American' or European)
+
 # power_of_ten - just print name of a the power of 10
 # BUG: The problem is that this function must perform arithmetic on the
 #      $num argument.  If $power is too large for an integer, we will
@@ -908,20 +912,17 @@ sub power_of_ten($$$)
     }
 # usage:
 }
-#	$integer	intger part of the number
-#	$fract		fractional part of number (or undef)
+#	\$integer	intger part of the number
+
+#	$system	the number system ('American' or 'European')
 #
-# XXX - This could be made much faster if we did not split the
-# 	integer part of the number into an array but rather
-#	used subst to extract sets of 3 digits like we do
-#	in print_number().
-#
-sub print_name($$$$)
+sub print_name($\$\$$)
 #	\$fract		fractional part of number (or undef)
     my ($neg, $integer, $fract, $system) = @_;	# get args
-    my @digit = qw(zero one two three four five six seven eight nine);
-    my $sep;		# word phrase separator between sets of words
-    my @set;		# sets of 3 digits
+sub print_name($$$$$)
+    my $bias_mod3;	# bias % 3
+    my $millia;		# millia arg, power of 1000 for a given set f 3
+    my $intstr;		# integer as a string
     my $fractlen = 0;	# length of the fractional part
     my $fulllen;	# approximate length of the input
     # If $bias is larger than $big_bias, then we cannot just treat
@@ -930,58 +931,78 @@ sub print_name($$$$)
     #
     $nonint_bias = 1 if ($bias < -$big_bias || $bias > $big_bias);
 
-    # split number into sets of 3 digits
+    # process a leading -, if needed
     #
-    while (($i = length($integer)) > 3) {
-	push @set, substr($integer, -3, 3);
-	$integer = substr($integer, 0, $i-3);
+    if ($neg) {
+	print "negative ";
     }
-    if (length($integer) > 0) {
-	push @set, $integer;
+
+	    $intstr .= "0";
+	} elsif ($bias_mod3 == 2) {
+    $intlen = length($$integer);
+	}
+	    $fulllen -= $bias;
+	}
+	if ($fulllen > $big_name) {
+	    big_err();
+    $set3 = substr($$integer, 0, $indx);
+    &print_3($set3);
+
+    # print the highest order set, which may be partial
+    #
+	&american_kilo($cnt3);
+    if ($system eq 'American') {
+	&european_kilo($cnt3);
     } else {
 	if ($bias > 0) {
-    # print the integer name
+	    european_kilo($millia+$cnt3);
 	} else {
-    if ($integer eq "0") {
-	print "zero";
-    } else {
-	$sep = "";
-	for ($i = @set; $i > 1; --$i) {
-	    if ($set[$i - 1] > 0) {
-		print $sep;
-		&print_3($set[$i-1]);
-		if ($system eq 'American') {
-		    print " ";
-		    &american_kilo($i-1);
-		} else {
-		    print " ";
-		    &european_kilo($i-1);
-		}
-		$sep = ",\n";
+	    european_kilo($cnt3);
+	$set3 = substr($$integer, $indx, 3);
+    }
+
+	if (defined $opt_l) {
+    #
+    while (--$cnt3 >= 0) {
+	$set3 = substr($intstr, $indx, 3);
+	$indx += 3;
+	&print_3($set3);
+	if ($cnt3 > 0) {
+	    print ", ";
+	} else {
+		&american_kilo($cnt3);
+	    if ($system eq 'American') {
+		&european_kilo($cnt3);
 	    } else {
 		if ($bias > 0) {
-	if ($set[0] > 0) {
-	    print $sep;
-	    &print_3($set[0]);
-	}
 		    european_kilo($millia+$cnt3);
 		} else {
 		    european_kilo($cnt3);
 		}
-    if (defined($fract)) {
+	    }
 
     # print after the decimal point if needed
     #
+	if (defined $opt_l) {
+	    print " ";
+	} else {
+        my $len;	# length of current line
+	my $line;	# current line being formed
 
-	    print "\npoint\n";
+	# mark the decimal point/comma
 	#
-	    print "\ncomma\n";
+	if (!$opt_o) {
 		    $len += $diglen;
 		} else {
 		    print "\n$zero";
 		    $len = $diglen - 1;
-	for ($i=0; $i < length($fract); ++$i) {
-	    print  $digit[ substr($fract, $i, 1) ], " ";
+		}
+	    if (defined $opt_l) {
+		print " ";
+	for ($i=0; $i < length($$fract); ++$i) {
+		print "\n";
+		    print " $dig";
+	    print  $digit[ substr($$fract, $i, 1) ];
 		    $len += $diglen;
 		} else {
 		    print "\n$dig";
@@ -991,7 +1012,7 @@ sub print_name($$$$)
 	}
     }
 # usage:
-#	print_3(123)
+}
 
 
 # print_3 - print 3 digits
