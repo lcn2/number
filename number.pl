@@ -1,7 +1,6 @@
 #!/usr/bin/perl -wT
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.21 $
-#  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
+#  @(#} $Revision: 1.22 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -21,9 +20,9 @@
 #
 # Be sure to see:
 #
-#	http://reality.sgi.com/chongo/number
+#	http://reality.sgi.com/chongo/number/number.html
 #
-# for the latest version of thsi code, as well as for a CGI demo program.
+# for the latest version of this code, as well as for a CGI demo program.
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -73,7 +72,7 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.21 $';
+my $version = '$Revision: 1.22 $';
 
 # Warning state
 my $warn = $^W;
@@ -148,7 +147,7 @@ my $help = qq{Usage:
     2.5e100).  Negative and floating point numbers are allowed.
 
     Updates from time to time are made to this program.
-    See http://reality.sgi.com/chongo/number for updates.
+    See http://reality.sgi.com/chongo/number/number.html for updates.
 
     You are using $version.
 
@@ -1280,7 +1279,7 @@ sub cgi_form()
     #
     if ($html == 1) {
 	print "<HR>\n<P>\n";
-	The <A HREF="/chongo/number/number">source</A> for this CGI
+	The <A HREF="/chongo/number/number.cgi.txt">source</A> for this CGI
 	script is available.
 	Save it as either <B>number.cgi</B> and/or <B>number</B>.
 	<p>
@@ -1298,7 +1297,7 @@ sub cgi_form()
 	Try <B>./number -h</B> for more info.
 	<P>
 	<HR>
-    </P> <blockquote>
+END_OF_HTML
     <A HREF="http://reality.sgi.com/chongo/index.html">chongo</A>
     &lt; was here &gt;
     Brought to you by:
@@ -1341,13 +1340,13 @@ sub big_error()
 	  "<li> Raise 10 to a power where the exponent is ",
 	  "less than $too_big characters in length.\n",
 	  "<li> You may download the\n",
-	  $cgi->a({'href' => "/chongo/number/number"},
+	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
 		  "number perl script"),
 	  " and run it yourself.<br>\n",
 	  $cgi->b("number.cgi"),
 	  $cgi->p,
 	  "The ",
-	  $cgi->a({'href' => "/chongo/number/number"},
+	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
 		  "number perl script"),
 	  " reads a number from standard input and has no size limit.<br>\n",
 	  " Try <b>./number -h</b> for more information.",
