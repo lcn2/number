@@ -371,18 +371,6 @@ MAIN:
 	&error("FATAL: Internal error, bias: $bias < 0 and int: $integer != 0");
 	} else {
 	    print $cgi->b("Name of number:"), "\n";
-# XXX
-&power_of_ten(\$integer, $system, $bias);
-my $pow = Math::BigInt->new($integer);
-print "DEBUG: pow: $pow\n";
-print "DEBUG: bias: $bias\n";
-&american_kilo($pow, $bias);
-print "\n";
-print "\n";
-&european_kilo($pow, $bias);
-print "\n";
-exit 0;
-
 	}
 	print $cgi->p, "\n";
 	print "<BLOCKQUOTE><PRE>\n";
@@ -1310,6 +1298,8 @@ sub power_of_ten($$$)
 sub print_name($\$\$$$)
 #	\$fract		fractional part of number (or undef)
 #	$system		number system ('American' or 'European')
+#	$bias		power of 10 bias (as BigInt) during de-sci
+#
 sub print_name($$$$$)
     my $bias_mod3;	# bias % 3
     my $millia;		# millia arg, power of 1000 for a given set f 3
@@ -1340,28 +1330,64 @@ sub print_name($$$$$)
 	print "negative ";
     }
 
+    # must deal with the zero as a special case
+    #
+    if ($$integer eq "0") {
+	print "zero";
+    }
+
+    # convert integer to string
+    #
+    ($intstr = $$integer) =~ s/[^\d]//g;
+
+    # For a bias > 0, we want that bias to be a multiple of 3
+    # so that we can add it to the 1st arg (power of 1000) of
+	
+    #
+    # We any bias % 3 and 'move' to the integer by adding 1 or 2 0's
+	# compute $bias % 3 and make $bias a multiple of 3
+	#
+	# Some BigInt implementations issue uninitialized
+	# warnings internal to the BigInt code with the
+	# bdiv below.  We block these bogus warnings.
+	#
+	$^W = 0;
+	($bias, $bias_mod3) = $bias->bdiv("3");
+	$^W = $warn;
+
+	# ``move`` the $bias % 3 value onto the end of integer
+	#
+	if ($bias_mod3 == 1) {
 	    $intstr .= "0";
 	} elsif ($bias_mod3 == 2) {
-    $intlen = length($$integer);
+	    $intstr .= "00";
 	}
 	    $fulllen -= $bias;
 	}
 	if ($fulllen > $big_name) {
 	    big_err();
-    $set3 = substr($$integer, 0, $indx);
+	}
     &print_3($set3);
 
     # print the highest order set, which may be partial
     #
-	&american_kilo($cnt3, $zero);	# XXX
+    $indx = 3-((3*$cnt3)-$intlen);
+	    &american_kilo($bias+$cnt3, $zero);
+    print_3($set3);
+	    &american_kilo($cnt3, $zero);
+    --$cnt3;
     if ($system eq 'American') {
-	&european_kilo($cnt3, $zero);	# XXX
+	if ($bias > 0) {
+	    &european_kilo($bias+$cnt3, $zero);
+	} else {
+	    &european_kilo($cnt3, $zero);
+	}
     } else {
 	if ($bias > 0) {
 	    european_kilo($millia+$cnt3);
 	} else {
 	    european_kilo($cnt3);
-	$set3 = substr($$integer, $indx, 3);
+	}
     }
 
 	if (defined $opt_o) {
@@ -1373,9 +1399,17 @@ sub print_name($$$$$)
 	if ($cnt3 > 0) {
 	    print ", ";
 	} else {
-		&american_kilo($cnt3, $zero);	# XXX
+	    print ",\n";
+		    &american_kilo($bias+$cnt3, $zero);
+	print_3($set3);
+		    &american_kilo($cnt3, $zero);
+	    print " ";
 	    if ($system eq 'American') {
-		&european_kilo($cnt3, $zero);	# XXX
+		if ($bias > 0) {
+		    &european_kilo($bias+$cnt3, $zero);
+		} else {
+		    &european_kilo($cnt3, $zero);
+		}
 	    } else {
 		if ($bias > 0) {
 		    european_kilo($millia+$cnt3);
