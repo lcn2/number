@@ -1,6 +1,6 @@
 #!/usr/bin/perl -wT
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.22 $
+#  @(#} $Revision: 1.23 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -22,7 +22,7 @@
 #
 #	http://reality.sgi.com/chongo/number/number.html
 #
-# for the latest version of this code, as well as for a CGI demo program.
+# for examples/help as well as the latest version of this code.
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -72,7 +72,7 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.22 $';
+my $version = '$Revision: 1.23 $';
 
 # Warning state
 my $warn = $^W;
@@ -1281,7 +1281,7 @@ sub cgi_form()
 	print "<HR>\n<P>\n";
 	The <A HREF="/chongo/number/number.cgi.txt">source</A> for this CGI
 	script is available.
-	Save it as either <B>number.cgi</B> and/or <B>number</B>.
+	Save it as either the filename <B>number.cgi</B> or <B>number</B>.
 	<p>
 	If you run this program as <B>number</B> (i.e., without the <B>.cgi</B>
 	extension),
@@ -1335,25 +1335,37 @@ sub big_error()
 	  "You have 4 choices:\n",
 	  "<ol>\n<li> Enter a number that is ",
 	  "less than $too_big characters in length.\n",
+	  $cgi->p,
 	  "<li> Compute a Latin power of a number that is ",
 	  "less than $too_big characters in length.\n",
+	  $cgi->p,
 	  "<li> Raise 10 to a power where the exponent is ",
 	  "less than $too_big characters in length.\n",
+	  $cgi->p,
 	  "<li> You may download the\n",
 	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
-		  "number perl script"),
-	  " and run it yourself.<br>\n",
+	  "If none of those options are what you want/need, you can\n",
+	  "run this program on your own computer in the non-CGI mode.\n",
+	  " Save it as either the filename ",
+	  $cgi->br,
+	  " and run it yourself.\n",
+	  $cgi->p,
+	  "If you do download the\n",
+	  $cgi->a({'href' => "/chongo/tech/math/number/number"},
+		  "source"),
+	  " save it as either the filename ",
+	  " operates as it is doing now.",
+	  $cgi->br,
+	  " or ",
+	  $cgi->b("number"),
+	  ".",
+	  $cgi->br,
+	  " The CGI script ",
 	  $cgi->b("number.cgi"),
 	  $cgi->p,
-	  "The ",
-	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
-		  "number perl script"),
-	  " reads a number from standard input and has no size limit.<br>\n",
-	  " Try <b>./number -h</b> for more information.",
-	  $cgi->p,
-	  "NOTE: &nbsp;Numbers entered in scientific notation are currently\n",
-	  "expanded into the full decimal form prior to any \n",
-	  "$too_big character length checking.\n",
+	  "NOTE: &nbsp;Numbers entered in scientific notation are currently",
+	  " expanded into the full decimal form prior to any",
+	  " $too_big character length checking.\n",
 	  " operates as it is doing now with size limits.",
     &trailer(1);
 	  $cgi->b("number"),
