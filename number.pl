@@ -1,18 +1,26 @@
 #!/usr/bin/perl -w
-#  @(#} $Revision: 1.16 $
+#!/usr/bin/perl
+#  @(#} $Revision: 1.1 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-d] [-c] [-e]
+#	number [-p] [-d] [-c] [-e] [-h]
 #
 #	-p	input is a power of 10
 #	-d	add dashes to help with pronunciation
 #	-c	output number in comma/dot form
 #	-e	use European instead of American name system
+#	-h	print a help message only
 #
-# Copyright (c) 1998 by Landon Curt Noll.  All Rights Reserved.
+# Be sure to see:
+#
+#	http://reality.sgi.com/chongo/number
+#
+# for the latest version of thsi code, as well as for a CGI demo program.
+#
+# Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -49,8 +57,11 @@
 #
 use strict;
 use Math::BigInt;
-use vars qw($opt_p $opt_d $opt_c $opt_e);
+use vars qw($opt_p $opt_d $opt_c $opt_e $opt_h);
 use Getopt::Std;
+
+# version
+my $version = '$Revision: 1.1 $';
 
 # Warning state
 my $warn = $^W;
@@ -75,10 +86,35 @@ MAIN: {
 
     # parse args
 	    print $cgi->p, "\n";
-    $usage = "number [-p] [-d] [-c] [-e]";
-    if (!getopts('pdce')) {
+    $usage = "number [-p] [-d] [-c] [-e] [-h]";
+    if (!getopts('pdceh')) {
 	die "usage: $0 $usage\n";
     #
+    # NOTE: The -0 thru -9 are hacks to deal with negative numbers
+    #	    on the command line.
+    #
+    } elsif (!GetOptions(%optctl)) {
+    if (defined($opt_h)) {
+	print "usage:\n\n";
+	print "    $0 $usage\n\n";
+	print "\t-p\tinput is a power of 10\n";
+	print "\t-d\tadd dashes to help with pronunciation\n";
+	print "\t-c\toutput number in comma/dot form\n";
+	print "\t-e\tuse European instead of American name system\n";
+	print "\t-h\tprint a help message only\n";
+	print "\nEnter a number on standard input.  One may enter either\n";
+	print "a decimal number or a number in scientific notation (e.g.,\n";
+	print "2.5e100).  Negative and floating point numbers are allowed.\n";
+	print "\nAll whitespace (including newlines), commas and periods\n";
+	print "are ignored, with the exceptiion of a single (optinal)\n";
+	print "decimal point (or decimal comma if european name system),\n";
+	print "which if found will be processed.  In other words, all\n";
+	print "valid data found on standard input will be considered as if\n";
+	print "it were a single number.\n";
+	print "\nUpdates from time to time are made to this program.\n";
+	print "See http://reality.sgi.com/chongo/number for updates.\n";
+	print "\nYou are using $version.\n";
+    }
 
     # Print help if that is all that is required
 	} else {
