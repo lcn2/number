@@ -1039,56 +1039,35 @@ sub latin_root($$)
     #
     return;
 }
-#	$bias	power of 10 bias (as BigInt) during de-sci notation converstion
 
-# Prints the name of 1000*(1000^$power).
+
 # american_kilo - return the name of power of 1000 under American system
-sub american_kilo($$)
+#
 # given:
-    my ($power, $bias) = @_;	# get args
-    my $big;			# $power as a BigInt
-    my $biasmod3;		# bias mod 3
-    my $biasmillia;		# int(bias/3)
+#	$power	power of 1000
+#
 # Prints the name of 1000^$power.
 #
 sub american_kilo($)
 {
 	&error("Negative powers of 1000 not supported: $power");
     my $big;		# $power as a BigInt
-    if ($bias < 0) {
-	&error("FATAL: Internal error, bias: $bias < 0 in american_kilo()");
-    }
-
-    # Convert $$power arg into BigInt format
-    #
-    $big = Math::BigInt->new($power);
-
-    # increase the power based on bias mod 3
-    #
-    $^W = 0;
-    $biasmod3 = $bias->bmod(3);
-    $biasmillia = ($bias - $biasmod3) / 3;
-    $^W = $warn;
-    if ($biasmod3 == 1) {
-	$big *= 10;
-    } elsif ($biasmod3 == 2) {
-	$big *= 100;
-    }
 
     # firewall
     #
-    if ($big == 0 && $biasmillia == 0) {
+    if ($power < 0) {
 	err("Negative powers of 1000 not supported: $power");
     }
 
     # We treat 0 as nothing
-    } elsif ($big == 1 && $biasmillia == 0) {
+    #
     if ($power == 0) {
 	return;
 
     # We must deal with 1 special since it does not use a direct Latin root
     #
-	&latin_root($big, $biasmillia);
+    } elsif ($power == 1) {
+	&latin_root($big-1, $zero);
 
     # Otherwise we use the Latin root process to construct the value.
     #
@@ -1098,9 +1077,8 @@ sub american_kilo($)
 	print "llion";
     }
 }
-#	$bias	power of 10 bias (as BigInt) during de-sci notation converstion
 
-# Prints the name of 1000*(1000^$power).
+
 # european_kilo - return the name of power of 1000 under European system
 #
 # given:
@@ -1109,50 +1087,26 @@ sub american_kilo($)
 # Prints the name of 1000^$power.
 #
 # The European system uses both "llion" and "lliard" suffixes for
-# XXX - deal with bias
-#
 sub european_kilo($$)
 # is for off powers.
-    my ($power, $bias) = @_;	# get args
+    my $power = $_[0];	# get arg
 # Because both "llion" and "lliard" suffixes are used, we need to
 # divide in half, the value before using the Latin root system.
-    my $big2;			# $power/2 as a BigInt modified by bias
-    my $biasmod3;		# bias mod 3
-    my $biasmillia;		# int(bias/3)
 #
 sub european_kilo($)
 {
     my $power = $_[0];		# get arg
 	&error("Negative powers of 1000 not supported: $power");
     my $big;			# $power as a BigInt
-    if ($bias < 0) {
-	&error("FATAL: Internal error, bias: $bias < 0 in european_kilo()");
-    }
-
-    # Convert $$power arg into BigInt format
-    #
-    $big = Math::BigInt->new($power);
-
-    # increase the power based on bias mod 3
-    #
-    $^W = 0;
-    $biasmod3 = $bias->bmod(3);
-    $biasmillia = ($bias - $biasmod3) / 3;
-    $^W = $warn;
-    if ($biasmod3 == 1) {
-	$big *= 10;
-    } elsif ($biasmod3 == 2) {
-	$big *= 100;
-    }
 
     # firewall
     #
-    if ($big == 0 && $biasmillia == 0) {
+    if ($power < 0) {
 	err("Negative powers of 1000 not supported: $power");
     }
 
     # We treat 0 as nothing
-    } elsif ($big == 1 && $biasmillia == 0) {
+    #
     if ($power == 0) {
 	return;
 
@@ -1161,50 +1115,23 @@ sub european_kilo($)
     } elsif ($power == 1) {
 	print "thousand";
 
-	# divide $big by 2 taking into account any $biasmillia
-	#
-	# We must determine if the big and biasmillia combination
-	# is even or odd.
+    # Use latin_root to determine the root while taking care to
     # deterine of we will end in "llion" (even big,biasmillia combo)
+	# divide $power by 2 and note if it was even or odd
 	#
-	if (($big % 2) == 0) {
-
-	    # big is even so big,biasmillia is even
-	    #
-	    $big /= 2;
-	    $mod2 = 0;
-
-	} else {
-
-	    # If we have biasmillia, then the big,biasmillia combination 
-	    # is even.  We divide by 2 by multiplying by 500 while reducing
-	    # biasmillia by one.  This results in an even number.
-	    #
-	    if ($biasmillia > 0) {
-		$big *= 500;
-		--$biasmillia;
-		$mod2 = 0;
-
-	    # We do not have biasmillia and big is odd, so we must use
-	    # the "lliard" roots
-	    #
-	    } else {
-		$big = ($big-1) / 2;
-		$mod2 = 1;
-	    }
-	}
+	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
 	#
 	$big = Math::BigInt->new($power);
 	$^W = 0;
-	    &latin_root($big, $biasmillia);
+	    &latin_root($big, $zero);
 	$^W = $warn;
 
 	# Even roots use "llion"
 	#
 	if ($mod2 == 0) {
-	    &latin_root($big, $biasmillia);
+	    &latin_root($big, $zero);
 	    print "llion";
 
 	# Odd roots use "lliard"
