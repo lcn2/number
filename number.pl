@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.4 $
+#  @(#} $Revision: 2.5 $
 #
 # number - print the English name of a number of any size
 #
@@ -86,7 +86,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.4 $';
+my $version = '$Revision: 2.5 $';
 
 # GetOptions argument
 #
@@ -190,7 +190,7 @@ my $help = qq{Usage:
 
     You are using $version.
 
-    chongo <number-mail@asthe.com> was here /\\../\\
+    chongo <number-mail\@asthe.com> was here /\\../\\
 };
 
 # main
