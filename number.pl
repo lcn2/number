@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.17 $
+#  @(#} $Revision: 2.18 $
 #
 # number - print the English name of a number of any size
 #
@@ -18,11 +18,18 @@
 #
 # If number is omitted, then it is read from standard input.
 #
-# When ran as:
+# When run as:
 #
 #	number.cgi
 #
-# it acts like a CGI script with suitable size limits for web applications.
+# then it will act like a CGI script with suitable size limits for
+# web applications.
+#
+# When run as:
+#
+#	number	(or number.pl or anything not ending in .cgi)
+#
+# then it will run without the web/CGI size limitations.
 #
 # Be sure to see:
 #
@@ -85,7 +92,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.17 $';
+my $version = '$Revision: 2.18 $';
 
 # CGI / HTML variables
 #
@@ -121,7 +128,7 @@ $SIG{ALRM} = sub { err("timeout"); };
 # For DOS (Denial Of Service) protection prevent file uploads and
 # really big "POSTS"
 #
-$CGI::POST_MAX = $big_input + 1024;	# max 100K posts
+$CGI::POST_MAX = $big_input + 1024;	# limit post size to max digits + 1k
 $CGI::DISABLE_UPLOADS = 1;		# no uploads
 
 # We have optimizations that allow us to treat a large power of 10 bias
