@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.20 $
+#  @(#} $Revision: 2.21 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,12 +85,13 @@
 # requirements
 #
 use strict;
+use bytes;
 use Math::BigInt;
 use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.20 $';
+my $version = '$Revision: 2.21 $';
 
 # CGI / HTML variables
 #
