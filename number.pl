@@ -1293,8 +1293,6 @@ sub power_of_ten($$$)
 #
 #			    notation converstion
 #	$neg		1 => number is negative, 0 => non-negative
-# XXX - need to deal bias > 0
-#
 sub print_name($\$\$$$)
 #	\$fract		fractional part of number (or undef)
 #	$system		number system ('American' or 'European')
@@ -1396,7 +1394,7 @@ sub print_name($$$$$)
 	$set3 = substr($intstr, $indx, 3);
 	$indx += 3;
 	&print_3($set3);
-	if ($cnt3 > 0) {
+	if ($opt_o) {
 	    print ", ";
 	} else {
 	    print ",\n";
@@ -1420,9 +1418,7 @@ sub print_name($$$$$)
 
     # print after the decimal point if needed
     #
-	if (defined $opt_o) {
-	    print " ";
-	} else {
+	if (!defined $opt_o) {
         my $len;	# length of current line
 	my $line;	# current line being formed
 
