@@ -904,7 +904,7 @@ sub latin_root($$)
     #
     # If $bias is larger than $big_bias, then we cannot just treat
     # it like an integer.  In the case of the web, we bail.  In
-    if ($num < @l_special && $millia == 0) {
+    # the case of non-web output, we have to perform BigInt processing.
     #
     $nonint_millia = 1 if ($millia > $big_bias);
 
@@ -1297,6 +1297,7 @@ sub print_name($\$\$$$)
 #	\$fract		fractional part of number (or undef)
 #	$system		number system ('American' or 'European')
 #	$bias		power of 10 bias (as BigInt) during de-sci
+#			    notation conversion
 #
 sub print_name($$$$$)
     my $bias_mod3;	# bias % 3
@@ -1360,6 +1361,7 @@ sub print_name($$$$$)
 	} elsif ($bias_mod3 == 2) {
 	    $intstr .= "00";
 	}
+    }
 	    $fulllen -= $bias;
 	}
 	if ($fulllen > $big_name) {
@@ -1370,13 +1372,13 @@ sub print_name($$$$$)
     # print the highest order set, which may be partial
     #
     $indx = 3-((3*$cnt3)-$intlen);
-	    &american_kilo($bias+$cnt3, $zero);
+	    &american_kilo($millia+$cnt3, $zero);
     print_3($set3);
 	    &american_kilo($cnt3, $zero);
     --$cnt3;
     if ($system eq 'American') {
 	if ($bias > 0) {
-	    &european_kilo($bias+$cnt3, $zero);
+	    &european_kilo($millia+$cnt3, $zero);
 	} else {
 	    &european_kilo($cnt3, $zero);
 	}
@@ -1398,13 +1400,13 @@ sub print_name($$$$$)
 	    print ", ";
 	} else {
 	    print ",\n";
-		    &american_kilo($bias+$cnt3, $zero);
+		    &american_kilo($millia+$cnt3, $zero);
 	print_3($set3);
 		    &american_kilo($cnt3, $zero);
 	    print " ";
 	    if ($system eq 'American') {
 		if ($bias > 0) {
-		    &european_kilo($bias+$cnt3, $zero);
+		    &european_kilo($millia+$cnt3, $zero);
 		} else {
 		    &european_kilo($cnt3, $zero);
 		}
