@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.7 $
+#  @(#} $Revision: 2.8 $
 #
 # number - print the English name of a number of any size
 #
@@ -33,7 +33,7 @@
 #
 # for examples/help as well as the latest version of this code.
 #
-# Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 2001 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -85,7 +85,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.7 $';
+my $version = '$Revision: 2.8 $';
 
 # GetOptions argument
 #
@@ -192,6 +192,21 @@ my $help = qq{Usage:
     chongo <number-mail at asthe dot com> was here /\\../\\
 };
 
+# forward declatations
+#
+sub exp_number($$$);
+sub print_number($$$$$$$);
+sub latin_root($$);
+sub american_kilo($);
+sub european_kilo($);
+sub power_of_ten($$$);
+sub print_name($$$$$);
+sub print_3($);
+sub cgi_form();
+sub trailer($);
+sub big_error();
+sub error($);
+
 # main
 #
 MAIN:
@@ -238,7 +253,7 @@ MAIN:
 	    print "Content-type: text/plain\n\n";
 	    print "Your browser sent bad or too much data!\n";
 	    print "Error: ", cgi_error(), "\n";
-	$num = &cgi_form();
+	    exit(1);
 	}
 	if (! defined $num) {
 	    print $cgi->p, "\n";
@@ -246,7 +261,7 @@ MAIN:
 	    exit(0);
 	}
 
-	&error("usage: $0 $usage");
+	error("usage: $0 $usage");
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
     #	    on the command line.
@@ -261,9 +276,9 @@ MAIN:
     if ($opt_h) {
 	print $help;
 	exit(0);
-	    &error("-c conflicts with either -l and/or -p");
+	    error("-c conflicts with either -l and/or -p");
 
-	    &error("You may only print decimal digits when the <I>Type of " .
+	    error("You may only print decimal digits when the <I>Type of " .
     #
     if ($opt_c && ($opt_l || $opt_p)) {
 	if ($html == 0) {
@@ -303,7 +318,7 @@ MAIN:
 	# snarf the number from the entire stdin
 	#
 	$/ = undef;
-	&big_error();
+	big_error();
     }
 
     # Web firewall
@@ -333,7 +348,7 @@ MAIN:
 	} else {
 	    # strip off leading 0's
 	    $num =~ s/^0+//;
-	&error("Numbers may have only one decimal $point.");
+	error("Numbers may have only one decimal $point.");
     }
 
     # firewall
@@ -344,7 +359,7 @@ MAIN:
     if ($num =~ /^$/) {
 	$num = "0";
     }
-	    &error(
+	    error(
     # If scientific (e or E notation), verify format
     # and convert it into a long decimal value.
     #
@@ -353,9 +368,9 @@ MAIN:
 	    err(
 	        "Scientific numbers may only have a leading -, digits\n" .
 		"an optional decimal $point (optionally followed by digits)\n" .
-	    &error("Scientific numbers must at least a digit before the e.");
+	    error("Scientific numbers must at least a digit before the e.");
 		"optional - and 1 more more digits after the e.  All\n" .
-	$num = &exp_number($num, $point, \$bias);
+		"3 digit separators, leading 0's and whitespace characters\n" .
 		"are ignored.");
     # We did not have a number is scientific notation so we have no bias
 	if ($num !~ /^\Q$point\E?\d/o) {
@@ -366,7 +381,7 @@ MAIN:
     # We did not have a number in scientific notation so we have no bias
     #
     } else {
-	&error("A number may only have a leading -, digits and an " .
+	error("A number may only have a leading -, digits and an " .
     }
 
     # verify that we have a valid number
@@ -384,10 +399,10 @@ MAIN:
 
     # verify that the number and the bias match
     #
-	&error("FATAL: Internal error, bias: $bias > 0 and fract: $fract != 0");
+	error("FATAL: Internal error, bias: $bias > 0 and fract: $fract != 0");
     # there is not enough digits right or left of the decimal point/comma.
     # A $bias > 0 can only happen when we have a 0 $fract part.
-	&error("FATAL: Internal error, bias: $bias < 0 and int: $integer != 0");
+	error("FATAL: Internal error, bias: $bias < 0 and int: $integer != 0");
 	} else {
 	    print $cgi->b("Name of number:"), "\n";
 	}
@@ -397,12 +412,12 @@ MAIN:
     }
 
     # catch the case where we only want to enter a power of 10
-	    &error("The power must be a non-negative integer.");
+	    error("The power must be a non-negative integer.");
     if ($opt_p || $opt_l) {
 
        # only allow powers of 10 that are non-negative integers
        #
-	   &power_of_ten(\$integer, $system, $bias);
+       if (defined($fract) || $neg) {
 	    err("The power must be a non-negative integer.");
 
        # print the name
@@ -410,21 +425,21 @@ MAIN:
        } else {
 	   power_of_ten(\$integer, $system, $bias);
        }
-	    &print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
+
     # print the number comma/dot separated
-	    &print_number($sep, $neg, \$integer, $point, \$fract, 76, $bias);
+    #
     } elsif ($opt_c) {
 
 	if ($opt_o) {
 	    print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
 	} else {
-	&print_name($neg, \$integer, \$fract, $system, $bias);
+	    print_number($sep, $neg, \$integer, $point, \$fract, 76, $bias);
 	}
 
     # otherwise print the first part of the response if allowed
     #
     } else {
-	&trailer(0);
+	print_name($neg, \$integer, \$fract, $system, $bias);
     }
 
     # If we are doing CGI/HTML stuff, print the trailer
@@ -465,7 +480,7 @@ MAIN:
 # given:
 #	$num	contains a string with something like -3.5e70 or
 #		.5e50 or 4E50 or 4.E-49
-sub exp_number($$\$)
+#	$point	the decimal point/comma
 #	\$bias	adjusted power of ten bias as a BigInt
 #
 # returns:
@@ -574,7 +589,7 @@ sub exp_number($$$)
 #	$sep		, or . set of 3 digit separators
 #	$neg		1 => number is negative, 0 => non-negative
 #	\$integer	integer part of the number
-sub print_number($$\$$\$$$)
+#	$point		decimal point/comma
 #	\$fract		fractional part of number (or undef)
 #	$linelen	max line length (0 => no limit)
 #	$bias		power of 10 bias (as BigInt) during de-sci
@@ -614,7 +629,7 @@ sub print_number($$$$$$$)
     }
     if (defined($$fract)) {
 	$fractlen = length($$fract);
-	    &big_error();
+	    big_error();
     if ($html) {
 	$fulllen = $bias->babs;
 	$fulllen += $fractlen;
@@ -921,7 +936,7 @@ sub latin_root($$)
     my $len;	# number of sets of 3 including the final (perhaps partial) 3
     my $millia_cnt;		# number of millia's to print
     my $millia_cnt_str;		# $millia_cnt as a string
-	&error("FATAL: Internal error, millia: $millia < 0 in latin_root()");
+	error("FATAL: Internal error, millia: $millia < 0 in latin_root()");
     my $i;
 
     # firewall
@@ -1072,7 +1087,7 @@ sub latin_root($$)
 #
 sub american_kilo($)
 {
-	&error("Negative powers of 1000 not supported: $power");
+	error("Negative powers of 1000 not supported: $power");
     my $big;		# $power as a BigInt
 
     # firewall
@@ -1089,7 +1104,7 @@ sub american_kilo($)
     # We must deal with 1 special since it does not use a direct Latin root
     #
     } elsif ($power == 1) {
-	&latin_root($big-1, $zero);
+	print "thousand";
 
     # Otherwise we use the Latin root process to construct the value.
     #
@@ -1109,16 +1124,16 @@ sub american_kilo($)
 # Prints the name of 1000^$power.
 #
 # The European system uses both "llion" and "lliard" suffixes for
-sub european_kilo($$)
+# each root value.  The "llion" is for even powers and the "lliard"
 # is for off powers.
-    my $power = $_[0];	# get arg
+#
 # Because both "llion" and "lliard" suffixes are used, we need to
 # divide in half, the value before using the Latin root system.
 #
 sub european_kilo($)
 {
     my $power = $_[0];		# get arg
-	&error("Negative powers of 1000 not supported: $power");
+	error("Negative powers of 1000 not supported: $power");
     my $big;			# $power as a BigInt
 
     # firewall
@@ -1151,13 +1166,13 @@ sub european_kilo($)
 	#
 	$big = Math::BigInt->new($power);
 	$^W = 0;
-	    &latin_root($big, $zero);
+	($big, $mod2) = $big->bdiv("2");
 	$^W = $warn;
 
 	# Even roots use "llion"
 	#
 	if ($mod2 == 0) {
-	    &latin_root($big, $zero);
+	    latin_root($big, $zero);
 	    print "llion";
 
 	# Odd roots use "lliard"
@@ -1171,7 +1186,7 @@ sub european_kilo($)
 
 
 # power_of_ten - just print name of a the power of 10
-sub power_of_ten(\$$$)
+#
 # given:
 #	\$power	the power of 10 to name print
 #	$system	the number system ('American' or 'European')
@@ -1186,7 +1201,7 @@ sub power_of_ten($$$)
     my $mod2;				# $kilo_power mod 2
     my $biasmod3;			# bias mod 3
     my $biasmillia;			# int(bias/3)
-	&error("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
+	error("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
     my $i;
 
     # firewall
@@ -1203,7 +1218,7 @@ sub power_of_ten($$$)
     #
     # If we gave -l, then we will assume that we are dealing with
     # a power of 1000 instead of a power of 10.
-	    &big_error();
+	    big_error();
     if ($opt_l) {
 
 	# Web firewall
@@ -1235,11 +1250,11 @@ sub power_of_ten($$$)
 	#
 	print "one";
 
-		&error("Scientific notation is not supported for powers\n" .
+		error("Scientific notation is not supported for powers\n" .
 
 	# firewall
 	#
-		&error("Scientific notation is not supported for powers of" .
+		error("Scientific notation is not supported for powers of" .
 	    if ($html) {
 		err("Scientific notation is not supported for powers\n" .
 		  "of 10 at this time. Try using <B>Latin powers</B> or enter" .
@@ -1285,7 +1300,7 @@ sub power_of_ten($$$)
     #
     } elsif ($kilo_power == 1 && $biasmillia == 0) {
 	print " thousand";
-	&latin_root($kilo_power-1, $biasmillia);
+
     # print the name based on the American name system
     #
     } elsif ($system eq 'American') {
@@ -1334,14 +1349,14 @@ sub power_of_ten($$$)
 		$mod2 = 1;
 	    }
 	}
-	    &latin_root($kilo_power, $biasmillia);
+	$^W = $warn;
 
 	# Even roots use "llion"
 	#
 	if ($mod2 == 0) {
 	    print " ";
 	    latin_root($kilo_power, $biasmillia);
-	    &latin_root($kilo_power, $biasmillia);
+	    print "llion";
 
 	# Odd roots use "lliard"
 	#
@@ -1359,7 +1374,7 @@ sub power_of_ten($$$)
 #
 # given:
 #	$neg		1 => number is negative, 0 => non-negative
-sub print_name($\$\$$$)
+#	\$integer	integer part of the number
 #	\$fract		fractional part of number (or undef)
 #	$system		number system ('American' or 'European')
 #	$bias		power of 10 bias (as BigInt) during de-sci
@@ -1434,20 +1449,20 @@ sub print_name($$$$$)
 	if ($fulllen > $big_name) {
 	    big_err();
 	}
-    &print_3($set3);
+    }
 
     # print the highest order set, which may be partial
     #
     $indx = 3-((3*$cnt3)-$intlen);
-	    &american_kilo($millia+$cnt3, $zero);
+    $set3 = substr($intstr, 0, $indx);
     print_3($set3);
-	    &american_kilo($cnt3, $zero);
+    print " ";
     --$cnt3;
     if ($system eq 'American') {
 	if ($bias > 0) {
-	    &european_kilo($millia+$cnt3, $zero);
+	    american_kilo($millia+$cnt3);
 	} else {
-	    &european_kilo($cnt3, $zero);
+	    american_kilo($cnt3);
 	}
     } else {
 	if ($bias > 0) {
@@ -1462,20 +1477,20 @@ sub print_name($$$$$)
     while (--$cnt3 >= 0) {
 	$set3 = substr($intstr, $indx, 3);
 	$indx += 3;
-	&print_3($set3);
+	next if $set3 == 0;
 	if ($opt_o) {
 	    print ", ";
 	} else {
 	    print ",\n";
-		    &american_kilo($millia+$cnt3, $zero);
+	}
 	print_3($set3);
-		    &american_kilo($cnt3, $zero);
+	if ($cnt3 > 0 || $bias > 0) {
 	    print " ";
 	    if ($system eq 'American') {
 		if ($bias > 0) {
-		    &european_kilo($millia+$cnt3, $zero);
+		    american_kilo($millia+$cnt3);
 		} else {
-		    &european_kilo($cnt3, $zero);
+		    american_kilo($cnt3);
 		}
 	    } else {
 		if ($bias > 0) {
@@ -1542,7 +1557,7 @@ sub print_3($)
     my $num;		# working value of number
     my $name_3;		# 3 digit name
 
-	&error("print_3 called with arg not in [0,999] range: $number")
+	error("print_3 called with arg not in [0,999] range: $number")
     #
     if (! defined($english_3[$number])) {
 
@@ -1597,7 +1612,7 @@ sub print_3($)
     print $english_3[$number];
 }
 
-sub cgi_form(\$)
+
 # cgi_form - print the CGI/HTML form
 #
 # returns:
@@ -1642,35 +1657,35 @@ sub cgi_form()
 	  $cgi->p,
 	  $cgi->start_form,
 	  "Type of input:",
-	  "&nbsp;" x 4,
+	  "nbsp;" x 4,
 	  $cgi->radio_group('name' => 'input',
 			  'values' => ['number', 'exp', 'latin'],
 			  'labels' => \%input_label,
 			  'default' => 'number'),
 	  $cgi->br,
 	  "Type of output:",
-	  "&nbsp;" x 2,
+	  "nbsp;" x 2,
 	  $cgi->radio_group('name' => 'output',
 			  'values' => ['name', 'digit'],
 			  'labels' => \%output_label,
 			  'default' => 'name'),
 	  $cgi->br,
 	  "Name system:",
-	  "&nbsp;" x 4,
+	  "nbsp;" x 4,
 	  $cgi->radio_group('name' => 'system',
 			  'values' => ['usa', 'europe'],
 			  'labels' => \%system_label,
 			  'default' => 'usa'),
 	  $cgi->br,
 	  "Millia style:",
-	  "&nbsp;" x 8,
+	  "nbsp;" x 8,
 	  $cgi->radio_group('name' => 'millia',
 			  'values' => ['dup', 'power'],
 			  'labels' => \%millia_label,
 			  'default' => 'dup'),
 	  $cgi->br,
 	  "Dash style:",
-	  "&nbsp;" x 10,
+	  "nbsp;" x 10,
 	  $cgi->radio_group('name' => 'dash',
 			  'values' => ['nodash', 'dash'],
 			  'labels' => \%dash_label,
@@ -1748,7 +1763,7 @@ sub cgi_form()
     } else {
 	print "\n<BLOCKQUOTE>\n",
 	      "<PRE>";
-	&trailer(0);
+	trailer(0);
 	exit(0);
     }
 
@@ -1798,7 +1813,7 @@ END_OF_HTML
     }
 
     print <<END_OF_HTML;
-    &lt; was here &gt;
+    lt; was here gt;
     Brought to you by:
     </P> <BLOCKQUOTE>
     Landon Curt Noll
@@ -1821,7 +1836,7 @@ sub big_error()
     if ($preblock) {
 	print $cgi->p, "\n";
 	print "</PRE>\n</BLOCKQUOTE>\n";
-	  "&nbsp;&nbsp;We have imposed an arbitrary size limit on",
+	  "nbsp;nbsp;We have imposed an arbitrary size limit on",
 
     # print too big error
     #
@@ -1837,10 +1852,10 @@ sub big_error()
 	  "network with lots of data ... assuming we had the memory to form\n",
 	  "the print buffer in the first place!\n";
 
-	  "<LI> Latin power scientific notation exponent &lt; ",
+	  "<LI> Latin power scientific notation exponent lt; ",
     #
     print $cgi->p,
-		"keep <I>exp</I> &lt; ", $big_latin_power,
+		"keep <I>exp</I> lt; ", $big_latin_power,
 	  "<UL>\n",
 	  "<LI> No more than $big_input characters of input\n",
 	  "<LI> Latin power scientific notation exponent &lt; ",
@@ -1896,7 +1911,7 @@ sub big_error()
 	  " The CGI script ",
 	  $cgi->b("number.cgi"),
 	  " operates as it is doing now with size limits.",
-    &trailer(1);
+	  " The Perl script ",
 	  $cgi->b("number"),
 	  " reads a number from standard input, has no size limits",
 	  "and does not perform any CGI/HTML actions.",
@@ -1922,7 +1937,7 @@ sub error($)
 	  $cgi->b("SORRY! "),
 	  $msg,
 	  "\n";
-    &trailer(0);
+    if ($preblock == 0) {
 	print $cgi->p, "\n";
 	print $cgi->hr, "\n";
 	print $cgi->p, "\n";
