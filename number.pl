@@ -6,10 +6,11 @@
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-d] [-c [-l]] [-e] [-h]
+#	number [-p] [-d] [-m] [-c [-l]] [-e] [-h]
 #
 #	-p	input is a power of 10
 #	-d	add dashes to help with pronunciation
+#	-m	output name in a more compact exponentation form
 #	-c	output number in comma/dot form
 #	-l	when used with -c, output number on a single line
 #	-e	use European instead of American name system
@@ -58,7 +59,7 @@
 #
 use strict;
 use Math::BigInt;
-use vars qw($opt_p $opt_d $opt_c $opt_l $opt_e $opt_h);
+use vars qw($opt_p $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
@@ -174,13 +175,14 @@ my @twenty = qw(ten eleven twelve thirteen fourteen
 
 # usage and help
 #
-my $usage = "number [-p] [-d] [-c [-l]] [-e] [-h]";
+my $usage = "number [-p] [-d] [-m] [-c [-l]] [-e] [-h]";
 my $help = qq{Usage:
 
     $0 $usage
 
 	-p	input is a power of 10
 	-d	add dashes to help with pronunciation
+	-m	output name in a more compact exponentation form
 	-c	output number in comma/dot form
 	-l	when used with -c, output number on a single line
 	-e	use European instead of American name system
@@ -221,7 +223,7 @@ MAIN: {
 
     # parse args
 	    print $cgi->p, "\n";
-    if (!getopts('pdcleh') || 
+    if (!getopts('pdmcleh') || 
 	(defined($opt_l) && !defined($opt_c))) {
 	die "usage: $0 $usage\n";
     #
@@ -515,12 +517,10 @@ sub print_number($$$$$$)
     # no line length specified (or value passed < 4) means just print it
 	if (defined($fract)) {
 
-	    print $integer;
-	    print $point;
-	    print $fract;
+	    print $integer, $point, $fract, "\n";
 
 		print $$fract;
-	    print $integer;
+	    print $integer, "\n";
 		    while (($bias -= $big_bias) > $big_bias) {
 			print "0" x $big_bias;
 		    }
@@ -608,8 +608,7 @@ sub print_number($$$$$$)
 		#
 	    $fractlen = length($fract);
 	    for ($i = 0; $i < $fractlen; $i += $linelen) {
-		print substr($fract, $i, $linelen);
-		print "\n";
+		print substr($fract, $i, $linelen), "\n";
 
 
 	# otherwise finish up the integer line
@@ -670,17 +669,41 @@ sub latin_root($)
 	    if ($dig12 > 0) {
 		# append as in 123
 		print $hundred[$dig3] . $dash .
-			$unit[$dig12] . $dash .
-			("milia$dash" x (scalar(@set_3)-1));
+			$unit[$dig12] . $dash;
+		if ($opt_m) {
+		    if (scalar(@set_3)-1 > 1) {
+			print "milia^", scalar(@set_3)-1, "$dash";
+		    } else {
+			print "milia$dash";
+		    }
+		} else {
+		    print "milia$dash" x (scalar(@set_3)-1);
+		}
 	    } else {
 		# append as in 100
-		print $hundred[$dig3] . $dash .
-			("milia$dash" x (scalar(@set_3)-1));
+		print $hundred[$dig3] . $dash;
+		if ($opt_m) {
+		    if (scalar(@set_3)-1 > 1) {
+			print "milia^", scalar(@set_3)-1, "$dash";
+		    } else {
+			print "milia$dash";
+		    }
+		} else {
+		    print "milia$dash" x (scalar(@set_3)-1);
+		}
 	    }
 	} elsif ($dig12 > 0) {
 	    # append as in 023
-	    print $unit[$dig12] . ($dig12 > 1 ? $dash : "") .
-		    ("milia$dash" x scalar(@set_3));
+	    print $unit[$dig12] . ($dig12 > 1 ? $dash : "");
+	    if ($opt_m) {
+		if (scalar(@set_3) > 1) {
+		    print "milia^", scalar(@set_3), "$dash";
+		} else {
+		    print "milia$dash";
+		}
+		if ($millia_cnt > 1) {
+		print "milia$dash" x scalar(@set_3);
+		if ($nonint_millia) {
 		    while (($millia_cnt -= $big_bias) > $big_bias) {
     #	trecen-dec-tillion
     #
