@@ -1066,6 +1066,8 @@ sub european_kilo($)
 
 #	$bias	power of 10 bias (as BigInt) during de-sci notation converstion
 # power_of_ten - just print name of a the power of 10
+# XXX - need to deal with bias
+#
 sub power_of_ten(\$$$)
 # given:
 #	\$power	the power of 10 to name print
@@ -1075,16 +1077,19 @@ sub power_of_ten(\$$$)
 sub power_of_ten($$$)
     my $one;				# 1 as a BigInt;
     my $mod3;				# $big mod 3
+    my $mod2;				# $kilo_power mod 2
+    my $biasmod3;			# bias mod 3
+    my $biasmillia;			# int(bias/3)
+	&error("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
+    my $i;
+
     # make 1  :-)
     #
     $one = Math::BigInt->new("1");
 	err("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
     # Convert $$power arg into BigInt format
     #
-    # We add in any power of 10 bias that was built up while
-    # converting from scientific notation.
-    #
-    $big = Math::BigInt->new($$power) + $bias;
+    $big = Math::BigInt->new($$power);
 
     # convert the power of 10 into a multipler and a power of 1000
 
@@ -1174,11 +1179,11 @@ sub power_of_ten($$$)
 }
 #	\$integer	intger part of the number
 
-#	$system	the number system ('American' or 'European')
+# print_name - print the name of a number
 #
 #			    notation converstion
 #	$neg		1 => number is negative, 0 => non-negative
-# XXX - need to use the bias arg
+# XXX - need to deal bias > 0
 #
 sub print_name($\$\$$$)
 #	\$fract		fractional part of number (or undef)
@@ -1187,8 +1192,20 @@ sub print_name($$$$$)
     my $bias_mod3;	# bias % 3
     my $millia;		# millia arg, power of 1000 for a given set f 3
     my $intstr;		# integer as a string
+    my $intlen;		# length of integer part in digits
     my $fractlen = 0;	# length of the fractional part
     my $fulllen;	# approximate length of the input
+    my $cnt3;		# current set of 3 index (or partial of highest)
+    my $set3;		# set of 3 digits
+    my $indx;		# index into integer
+    my $nonint_bias = 0;    # 1 => $bias is very large, process with care
+    my $i;
+
+    # watch out for large a bias
+    if ($nonint_bias && $html == 1) {
+	&big_error();
+    }
+    #
     # If $bias is larger than $big_bias, then we cannot just treat
     # it like an integer.  In the case of the web, we bail.  In
     # the case of non-web output, we have to perform BigInt processing.
@@ -1256,6 +1273,18 @@ sub print_name($$$$$)
 	# mark the decimal point/comma
 	#
 	if (!$opt_o) {
+	    print "\n";
+	if ($opt_o) {
+	    print " ";
+	} else {
+	    print "\n";
+	    $len = 0;
+	    if (defined $opt_o) {
+		print " ";
+	while ($bias++ < 0) {
+		print "\n";
+		    print " $zero";
+	    print $digit[0];
 		    $len += $diglen;
 		} else {
 		    print "\n$zero";
