@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.19 $
+#  @(#} $Revision: 2.20 $
 #
 # number - print the English name of a number of any size
 #
@@ -41,7 +41,7 @@
 #
 # for examples/help as well as the latest version of this code.
 #
-# Copyright (c) 1998-2002 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2003 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -63,23 +63,21 @@
 #
 # With many thanks for Latin suggestions from:
 #
-#			Jeff Drummond
-#			jjd at sgi.com
+#	Jeff Drummond
+#	jjd at sgi.com
 #
 # as well as thanks to these people for their bug reports on earlier versions:
 #
-#	Dr K.M. Briggs		Fredrik Mansfeld
-#	kmb28 at cus.cam.ac.uk	fredrik at abaris.se
+#	Dr K.M. Briggs			Fredrik Mansfeld
+#	kmb28 at cus.cam.ac.uk		fredrik at abaris.se
 #
 # Comments, suggestions, bug fixes and questions about these routines
 # are welcome.  Send EMail to the address given below.
 #
 # Happy bit twiddling,
 #
-#			Landon Curt Noll
-#
-#			number-mail at asthe dot com
-#			http://www.isthe.com/chongo
+#	Landon Curt Noll
+#	http://www.isthe.com/chongo
 #
 # chongo was here	/\../\
 #
@@ -92,7 +90,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.19 $';
+my $version = '$Revision: 2.20 $';
 
 # CGI / HTML variables
 #
@@ -142,8 +140,6 @@ my $big_bias = 1000;		# a big bias (should be < 2^31).
 
 # misc BigInt
 #
-my $zero = Math::BigInt->new("0");
-my $one = Math::BigInt->new("1");
 my $two = Math::BigInt->new("2");
 my $three = Math::BigInt->new("3");
 my $eight = Math::BigInt->new("8");
@@ -172,11 +168,11 @@ my @l_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
 # will be returned by table lookup.
 #
 my @english_3;
-my @digit = qw(zero one two three four five six seven eight nine);
-my @ten = qw(zero ten twenty thirty forty
-	     fifty sixty seventy eighty ninety);
-my @twenty = qw(ten eleven twelve thirteen fourteen
-		fifteen sixteen seventeen eighteen nineteen);
+my @digits = qw(zero one two three four five six seven eight nine);
+my @tens = qw(zero ten twenty thirty forty
+	      fifty sixty seventy eighty ninety);
+my @teens = qw(ten eleven twelve thirteen fourteen
+	       fifteen sixteen seventeen eighteen nineteen);
 
 # usage and help
 #
@@ -420,7 +416,7 @@ MAIN:
     # We did not have a number in scientific notation so we have no bias
     #
     } else {
-	$bias = Math::BigInt->new("0");
+	$bias = Math::BigInt->bzero();
     }
 
     # verify that we have a valid number
@@ -562,7 +558,7 @@ sub exp_number($$$)
     # If we have a 0 exponent, just return the lead with a zero bias
     #
     if ($exp == 0) {
-	$$bias = $zero;
+	$$bias = Math::BigInt->bzero();
 	return $lead;
     }
 
@@ -597,7 +593,7 @@ sub exp_number($$$)
 	    # we use $expstr because we know that it is a small value
 	    $int .= substr($frac, 0, $expstr);
 	    $frac = substr($frac, $expstr);
-	    $$bias = $zero;
+	    $$bias = Math::BigInt->bzero();
 	}
 
     # If we need to move the decimal point/comma to the left, then
@@ -626,7 +622,7 @@ sub exp_number($$$)
 	    # we use $expstr because we know that it is a small value
 	    $frac = substr($int, $expstr) . $frac;
 	    $int = substr($int, 0, length($int)+$expstr);
-	    $$bias = $zero;
+	    $$bias = Math::BigInt->bzero();
 	}
     }
 
@@ -658,12 +654,10 @@ sub print_number($$$$$$$)
     # get args
     my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
     my $wholelen;	# length of the integer part as modified by bias
-    my $intlen = 0;	# length of the integer part without bias
-    my $fractlen = 0;	# length of the fractional part
+    my $intlen;		# length of the integer part without bias
+    my $fractlen;	# length of the fractional part
     my $leadlen;	# length of digits, separators and - on 1st line
-    my $fulllen;	# approximate length of the input
     my $col;		# current output column, first col is 1
-    my $nonint_bias = 0;    # 1 => $bias is very large, process with care
     my $i;
 
     # deal with the zero special case
@@ -672,27 +666,26 @@ sub print_number($$$$$$$)
 	$$integer = "0";
     }
 
-    # watch out for large a bias
-    #
-    # If $bias is larger than $big_bias, then we cannot just treat
-    # it like an integer.  In the case of the web, we bail.  In
-    # the case of non-web output, we have to perform BigInt processing.
-    #
-    $nonint_bias = 1 if ($bias < -$big_bias || $bias > $big_bias);
-
     # determine if the web limits will apply
     #
+    $intlen = 0;
     if (defined($$integer)) {
 	$intlen = length($$integer);
     }
+    $fractlen = 0;
     if (defined($$fract)) {
 	$fractlen = length($$fract);
     }
     if ($html) {
-	$fulllen = $bias->babs;
-	$fulllen += $fractlen;
-	$fulllen += int($intlen*4/3);
-	if ($fulllen < -$big_decimal || $fulllen > $big_decimal) {
+	my $fulllen;	# approximate length of the input as BigInt
+
+	# $fulllen = abs($bias) + $fractlen + int($intlen*4/3)
+	$fulllen = $bias->copy();
+	$fulllen->babs();
+	$fulllen->badd($fractlen);
+	$fulllen->badd(int($intlen*4/3));
+	# if $fulllen > $big_decimal
+	if ($fulllen->bcmp($big_decimal) > 0) {
 	    big_err();
 	}
     }
@@ -725,19 +718,28 @@ sub print_number($$$$$$$)
 	    # if biased, print 0's then fract
 	    if ($bias < 0) {
 
-		# if bias is not int sized, print in 'smaller' chunks
-		# until bias is again in sized
-		if ($nonint_bias) {
-		    while (($bias += $big_bias) < -$big_bias) {
-			print "0" x $big_bias;
-		    }
+		# print 0's in big_bias chuncks at a time
+		#
+		# NOTE: Some implementations, using a BigInt count
+		#	in an x (duplication) does not work.  So we
+		#	avoid this by printing big_bias chuncks at a time.
+		#
+		$bias->badd($big_bias);
+		while ($bias < 0) {
+		    print "0" x $big_bias;
+		    $bias->badd($big_bias);
 		}
-		print "0" x $bias, $$fract;
-
-	    # if non-biased, just print fract
-	    } else {
-		print $$fract;
+		$bias->bsub($big_bias);
+		if ($bias != 0) {
+		    my $tmp;
+		    $tmp = $bias->bstr();
+		    print "0" x -$tmp;
+		}
 	    }
+
+	    # print the remainder of the fraction
+	    #
+	    print $$fract;
 
 	} else {
 
@@ -750,14 +752,23 @@ sub print_number($$$$$$$)
 	    # if biased, print 0's
 	    if ($bias > 0) {
 
-		# if bias is not int sized, print in 'smaller' chunks
-		# until bias is again in sized
-		if ($nonint_bias) {
-		    while (($bias -= $big_bias) > $big_bias) {
-			print "0" x $big_bias;
-		    }
+		# print 0's in big_bias chuncks at a time
+		#
+		# NOTE: Some implementations, using a BigInt count
+		#	in an x (duplication) does not work.  So we
+		#	avoid this by printing big_bias chuncks at a time.
+		#
+		$bias->bsub($big_bias);
+		if ($bias > 0) {
+		    print "0" x $big_bias;
+		    $bias->bsub($big_bias);
 		}
-		print "0" x $bias;
+		$bias->badd($big_bias);
+		if ($bias != 0) {
+		    my $tmp;
+		    $tmp = $bias->bstr();
+		    print "0" x $tmp;
+		}
 	    }
 	}
 
@@ -772,8 +783,8 @@ sub print_number($$$$$$$)
 	if ($bias > 0) {
 	    $wholelen += $bias;
 	}
-	$leadlen = $wholelen;
-	if ($wholelen > 3) {
+	$leadlen = $wholelen->copy();
+	if ($wholelen->bcmp(3) > 0) {	# if >3
 	    my $tmp;
 
 	    # account for separators
@@ -781,21 +792,19 @@ sub print_number($$$$$$$)
 	    # Some BigInt implementations issue uninitialized
 	    # warnings internal to the BigInt code with the
 	    # division below.  We block these bogus warnings.
-	    # We also reform the quotient to work around a bdiv bug
-	    # that exists in some implementations.
 	    #
 	    # $leadlen += ($wholelen-1)/3;
 	    #
-	    $tmp = $wholelen->bsub($one);
+	    $tmp = $wholelen->copy();
+	    $tmp->bdec();
 	    $^W = 0;
-	    $tmp = $tmp->bdiv($three);
+	    $tmp->bdiv($three);
 	    $^W = $warn;
-	    $tmp = Math::BigInt->new($tmp);
-	    $leadlen = $tmp->badd($leadlen);
+	    $leadlen->badd($tmp);
 	}
 	if ($neg) {
 	    # account for - sign
-	    ++$leadlen;
+	    $leadlen->binc();
 	}
 
 	# print enough the leading whitespace so that the
@@ -885,8 +894,8 @@ sub print_number($$$$$$$)
 
 	# if biased > 0, output sets of 0's until decimal point/comma
 	#
-	if ($wholelen > $intlen) {
-	    while ($i < $wholelen) {
+	if ($wholelen->bcmp($intlen) > 0)  {	# if >$intlen
+	    while ($wholelen->bcmp($i) > 0) {	# while $i < $wholelen
 
 		# output the separator, we add a newline if the line
 		# is at or beyond the limit
@@ -925,25 +934,24 @@ sub print_number($$$$$$$)
 
 		# print whole lines of 0's while we have lots of bias
 		#
-		while ($bias < -$linelen) {
+		# while $bias < -$linelen
+		$bias->badd($linelen);
+		while ($bias < 0) {
 		    print "0" x $linelen, "\n";
-		    $bias += $linelen;
+		    $bias->badd($linelen);
 		}
+		$bias->bsub($linelen);
 
 		# print the last line of bias 0's
 		#
-		# Avoid using a BigInt in an ``x repeat'' context,
-		# it doesn't work well in some Perl v5 versions.
+		# NOTE: Some implementations, using a BigInt count
+		#	in an x (duplication) does not work.  So we
+		#	avoid this by printing using a scalar repeater.
 		#
-		while ($bias->bcmp($neg_eight) < 0) {
-		    print "0" x 8;
-		    $offset += 8;
-		    $bias = $bias->badd($eight);
-		}
-		while ($bias->is_negative) {
-		    $bias = $bias->badd($one);
-		    print "0";
-		    $offset++;
+		if ($bias != 0) {
+		    $i = $bias->bstr();
+		    print "0" x -$i;
+		    $offset += -$i;
 		}
 
 		# print the first line of fract to fill out the line
@@ -1003,8 +1011,6 @@ sub latin_root($$)
     my $l1;	# latin name for 1st digit in a set of 3
     my $len;	# number of sets of 3 including the final (perhaps partial) 3
     my $millia_cnt;		# number of millia's to print
-    my $millia_cnt_str;		# $millia_cnt as a string
-    my $nonint_millia = 0;	# 1 => $millia is very large, process with care
     my $i;
 
     # firewall
@@ -1012,14 +1018,6 @@ sub latin_root($$)
     if ($millia < 0) {
 	err("FATAL: Internal error, millia: $millia < 0 in latin_root()");
     }
-
-    # watch out for large a bias
-    #
-    # If $bias is larger than $big_bias, then we cannot just treat
-    # it like an integer.  In the case of the web, we bail.  In
-    # the case of non-web output, we have to perform BigInt processing.
-    #
-    $nonint_millia = 1 if ($millia > $big_bias);
 
     # deal with small special cases for small values
     #
@@ -1048,7 +1046,8 @@ sub latin_root($$)
     # We have to be careful about how we compute $millia+len-1
     # so that it will not become a floating value.
     #
-    $millia_cnt = $millia + $len;
+    $millia_cnt = $millia->copy();
+    $millia_cnt->badd($len);
 
     # process each set of 3 digits up to but not
     # including the last set of 3
@@ -1058,11 +1057,7 @@ sub latin_root($$)
 	# keep track of the number of millia's we might print
 	#
 	if ($millia_cnt > 0) {
-	    # Some BigInt implementations issue uninitialized
-	    # warnings internal to the BigInt code with the
-	    # decrement below.  We block these bogus warnings.
-	    #
-	    --$millia_cnt;
+	    $millia_cnt->bdec();
 	}
 
 	# do nothing if 000
@@ -1091,7 +1086,7 @@ sub latin_root($$)
 	#
 	# We will skip the printing of the 3 digits if
 	# we have just 001 in all but the lowest set of 3.
-	# This results in no output do that we wind up with
+	# This results in no output so that we wind up with
 	# something such as:
 	#
 	#	something-tillion
@@ -1108,19 +1103,34 @@ sub latin_root($$)
 	#
 	if ($millia > 0 || $i < $len-1) {
 	    if ($opt_m) {
-		if ($millia_cnt > 1) {
-		    ($millia_cnt_str = $millia_cnt) =~ s/[^\d]//g;
-		    print "millia^", $millia_cnt_str, "$dash";
+
+		# print millia's with ^number (-m) notation
+		#
+		if ($millia_cnt->bcmp(1) > 0) {		# if $millia_cnt > 1
+		    print "millia^", $millia_cnt->bstr(), $dash;
 		} else {
-		    print "millia", "$dash";
+		    print "millia", $dash;
 		}
 	    } else {
-		if ($nonint_millia) {
-		    while (($millia_cnt -= $big_bias) > $big_bias) {
-			print "millia$dash" x $big_bias;
-		    }
+
+		# print the millia's without ^number (-n) notation
+		#
+		# NOTE: Some implementations, using a BigInt count
+		#	in an x (duplication) does not work.  So we
+		#	avoid this by printing big_bias chuncks at a time.
+		#
+		$millia_cnt->bsub($big_bias);
+		while($millia_cnt > 0) {
+		    print "millia$dash" x $big_bias;
+		    $millia_cnt->bsub($big_bias);
 		}
-		print "millia$dash" x $millia_cnt;
+		$millia_cnt->badd($big_bias);
+		if ($millia_cnt != 0) {
+		    my $tmp;
+		    $tmp = $millia_cnt->bstr();
+		    print "millia$dash" x $tmp;
+		}
+
 	    }
 	}
     }
@@ -1178,7 +1188,7 @@ sub american_kilo($)
     #
     } else {
 	$big = Math::BigInt->new($power);
-	latin_root($big->bsub($one), $zero);
+	latin_root($big->bdec(), Math::BigInt->bzero());
 	print "llion";
     }
 }
@@ -1231,25 +1241,22 @@ sub european_kilo($)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
-	# We also reform the quotient to work around a bdiv bug
-	# that exists in some implementations.
 	#
 	$big = Math::BigInt->new($power);
 	$^W = 0;
 	($big, $mod2) = $big->bdiv($two);
 	$^W = $warn;
-	$big = Math::BigInt->new($big);
 
 	# Even roots use "llion"
 	#
 	if ($mod2 == 0) {
-	    latin_root($big, $zero);
+	    latin_root($big, Math::BigInt->bzero());
 	    print "llion";
 
 	# Odd roots use "lliard"
 	#
 	} else {
-	    latin_root($big, $zero);
+	    latin_root($big, Math::BigInt->bzero());
 	    print "lliard";
 	}
     }
@@ -1294,7 +1301,7 @@ sub power_of_ten($$$)
 
 	# Web firewall
 	#
-	if ($html && !$opt_m && $bias > $big_latin_power) {
+	if ($html && !$opt_m && $bias->bcmp($big_latin_power) > 0) {
 	    big_err();
 	}
 
@@ -1303,22 +1310,19 @@ sub power_of_ten($$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# division and mod below.  We block these bogus warnings.
-	# We also reform the quotient to work around a bdiv bug
-	# that exists in some implementations.
 	#
 	$^W = 0;
 	($biasmillia, $biasmod3) = $bias->bdiv($three);
 	$^W = $warn;
-	$biasmillia = Math::BigInt->new($biasmillia);
 	if ($biasmod3 == 1) {
-	    $big = $big->bmul($ten);
+	    $big->bmul($ten);
 	} elsif ($biasmod3 == 2) {
-	    $big = $big->bmul($hundred);
+	    $big->bmul($hundred);
 	}
 
 	# under -l, we deal with powers of 1000 above 1000
 	#
-	$kilo_power = $big;
+	$kilo_power = $big->copy();
 
 	# under -l, our multiplier name is always one
 	#
@@ -1346,14 +1350,11 @@ sub power_of_ten($$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
-	# We also reform the quotient to work around a bdiv bug
-	# that exists in some implementations.
 	#
 	$^W = 0;
 	($kilo_power, $mod3) = $big->bdiv(3);
 	$^W = $warn;
-	$kilo_power = Math::BigInt->new($kilo_power);
-	$biasmillia = $zero;
+	$biasmillia = Math::BigInt->bzero();
 
 	# print the multiplier name
 	#
@@ -1369,7 +1370,7 @@ sub power_of_ten($$$)
     # A zero kilo_power means that we only have 1, 10 or 100
     # and so there is nothing else to print.
     #
-    if ($kilo_power < 1 && $biasmillia == 0) {
+    if ($kilo_power->bcmp(1) < 0 && $biasmillia == 0) {
 	# nothing else to print
 
     # We must treat a kilo_power of 1 as a special case
@@ -1383,7 +1384,7 @@ sub power_of_ten($$$)
     } elsif ($system eq 'American') {
 
 	print " ";
-	latin_root($kilo_power->bsub($one), $biasmillia);
+	latin_root($kilo_power->bdec(), $biasmillia);
 	print "llion";
 
     # print the name based on the European name system
@@ -1398,16 +1399,13 @@ sub power_of_ten($$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# division and mod below.  We block these bogus warnings.
-	# We also reform the quotient to work around a bdiv bug
-	# that exists in some implementations.
 	#
 	$^W = 0;
 	if (($kilo_power % 2) == 0) {
 
 	    # kilo_power is even so kilo_power,biasmillia is even
 	    #
-	    $kilo_power = $kilo_power->bdiv($two);
-	    $kilo_power = Math::BigInt->new($kilo_power);
+	    $kilo_power->bdiv($two);
 	    $mod2 = 0;
 
 	} else {
@@ -1417,17 +1415,16 @@ sub power_of_ten($$$)
 	    # biasmillia by one.  This results in an even number.
 	    #
 	    if ($biasmillia > 0) {
-		$kilo_power = $kilo_power->bmul($five_hundred);
-		--$biasmillia;
+		$kilo_power->bmul($five_hundred);
+		$biasmillia->bdec();
 		$mod2 = 0;
 
 	    # We do not have biasmillia and kilo_power is odd, so we must use
 	    # the "lliard" roots
 	    #
 	    } else {
-		$kilo_power = $kilo_power->bsub($one);
-		$kilo_power = $kilo_power->bdiv($two);
-		$kilo_power = Math::BigInt->new($kilo_power);
+		$kilo_power->bdec();
+		$kilo_power->bdiv($two);
 		$mod2 = 1;
 	    }
 	}
@@ -1470,20 +1467,10 @@ sub print_name($$$$$)
     my $intstr;		# integer as a string
     my $intlen;		# length of integer part in digits
     my $fractlen = 0;	# length of the fractional part
-    my $fulllen;	# approximate length of the input
     my $cnt3;		# current set of 3 index (or partial of highest)
     my $set3;		# set of 3 digits
     my $indx;		# index into integer
-    my $nonint_bias = 0;    # 1 => $bias is very large, process with care
     my $i;
-
-    # watch out for large a bias
-    #
-    # If $bias is larger than $big_bias, then we cannot just treat
-    # it like an integer.  In the case of the web, we bail.  In
-    # the case of non-web output, we have to perform BigInt processing.
-    #
-    $nonint_bias = 1 if ($bias < -$big_bias || $bias > $big_bias);
 
     # process a leading -, if needed
     #
@@ -1515,13 +1502,10 @@ sub print_name($$$$$)
 	# Some BigInt implementations issue uninitialized
 	# warnings internal to the BigInt code with the
 	# bdiv below.  We block these bogus warnings.
-	# We also reform the quotient to work around a bdiv bug
-	# that exists in some implementations.
 	#
 	$^W = 0;
 	($bias, $bias_mod3) = $bias->bdiv($three);
 	$^W = $warn;
-	$bias = Math::BigInt->new($bias);
 
 	# ``move`` the $bias % 3 value onto the end of integer
 	#
@@ -1544,11 +1528,13 @@ sub print_name($$$$$)
 	$fractlen = length($$fract);
     }
     if ($html) {
-	$fulllen = abs($fractlen) + abs($intlen);
+	my $fulllen;	# approximate length of the input as BigInt
+
+	$fulllen = Math::BigInt->new(abs($fractlen) + abs($intlen));
 	if ($bias < 0) {
-	    $fulllen -= $bias;
+	    $fulllen->bsub($bias);
 	}
-	if ($fulllen > $big_digits) {
+	if ($fulllen->bcmp($big_digits) > 0) {	# if $fulllen > $big_digits
 	    big_err();
 	}
     }
@@ -1629,11 +1615,11 @@ sub print_name($$$$$)
 
 	# if biased, print off leading zero's
 	#
-	#
-	while ($bias++ < 0) {
-	    my $zero = $digit[0];		# zero digit
+	while ($bias < 0) {
+	    my $zero = $digits[0];		# zero digit
 	    my $diglen = length($zero)+1;	# length of zero name + space
 
+	    $bias->binc();
 	    if ($opt_o) {
 		print " $zero";
 	    } else {
@@ -1653,7 +1639,7 @@ sub print_name($$$$$)
 	# list off the digits
 	#
 	for ($i=0; $i < length($$fract); ++$i) {
-	    my $dig = $digit[ substr($$fract, $i, 1) ];	# the digit to print
+	    my $dig = $digits[substr($$fract, $i, 1)];	# the digit to print
 	    my $diglen = length($dig)+1;		# length of digit + ' '
 
 	    if ($opt_o) {
@@ -1702,7 +1688,7 @@ sub print_3($)
 	# determine the hundreds name, if needed
 	#
 	if ($number > 99) {
-	    $name_3 = $digit[$number/100] . " hundred";
+	    $name_3 = $digits[$number/100] . " hundred";
 	}
 
 	# determine the name of tens and one if more than 19
@@ -1712,9 +1698,9 @@ sub print_3($)
 	    if ($number > 99) {
 		$name_3 .= " ";
 	    }
-	    $name_3 .= $ten[$num/10];
+	    $name_3 .= $tens[$num/10];
 	    if ($num % 10 > 0) {
-		$name_3 .= " " . $digit[$num % 10];
+		$name_3 .= " " . $digits[$num % 10];
 	    }
 
 	# determine the name of tens and one if more than 9
@@ -1723,7 +1709,7 @@ sub print_3($)
 	    if ($number > 99) {
 		$name_3 .= " ";
 	    }
-	    $name_3 .= $twenty[$num-10];
+	    $name_3 .= $teens[$num-10];
 
 	# otherwise determine the name the digit
 	#
@@ -1731,7 +1717,7 @@ sub print_3($)
 	    if ($number > 99) {
 		$name_3 .= " ";
 	    }
-	    $name_3 .= $digit[$num];
+	    $name_3 .= $digits[$num];
 	}
 
 	# save the 3 digit name
