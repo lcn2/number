@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.13 $
+#  @(#} $Revision: 2.14 $
 #
 # number - print the English name of a number of any size
 #
@@ -86,7 +86,7 @@ use Getopt::Long;
 use CGI;
 
 # version
-my $version = '$Revision: 2.13 $';
+my $version = '$Revision: 2.14 $';
 
 # GetOptions argument
 #
@@ -106,6 +106,8 @@ my $big_input = 100000;		# too many input digits for the web
 my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
 my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
 my $big_name = 100000;		# too compents in a name
+my $big_timeout = 7;		# max time to do anything
+$SIG{ALRM} = sub { error("timeout"); };
 
 # We have optimizations that allow us to treat a large power of 10 bias
 # (due to conversion of a very large scientific notation number) in
@@ -254,6 +256,7 @@ MAIN:
 
 	# CGI setup
 	#
+	alarm($big_timeout);
 	$cgi = new CGI;
 	if (cgi_error()) {
 	    print "Content-type: text/plain\n\n";
@@ -1983,7 +1986,10 @@ sub error($)
 # given:
 #	$msg	the message to print
 #
-    if ($html == 0) {
+sub err($)
+{
+    my $msg = $_[0];	# get args
+
     # just issue the die message if not in CGI/HTML mode
     #
     if ($html == 0 || $cgi == 0) {
