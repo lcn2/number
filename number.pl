@@ -6,11 +6,12 @@
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-d] [-c] [-e] [-h]
+#	number [-p] [-d] [-c [-l]] [-e] [-h]
 #
 #	-p	input is a power of 10
 #	-d	add dashes to help with pronunciation
 #	-c	output number in comma/dot form
+#	-l	when used with -c, output number on a single line
 #	-e	use European instead of American name system
 #	-h	print a help message only
 #
@@ -57,7 +58,7 @@
 #
 use strict;
 use Math::BigInt;
-use vars qw($opt_p $opt_d $opt_c $opt_e $opt_h);
+use vars qw($opt_p $opt_d $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
@@ -173,7 +174,7 @@ my @twenty = qw(ten eleven twelve thirteen fourteen
 
 # usage and help
 #
-my $usage = "number [-p] [-d] [-c] [-e] [-h]";
+my $usage = "number [-p] [-d] [-c [-l]] [-e] [-h]";
 my $help = qq{Usage:
 
     $0 $usage
@@ -181,6 +182,7 @@ my $help = qq{Usage:
 	-p	input is a power of 10
 	-d	add dashes to help with pronunciation
 	-c	output number in comma/dot form
+	-l	when used with -c, output number on a single line
 	-e	use European instead of American name system
 	-h	print a help message only
 
@@ -219,7 +221,8 @@ MAIN: {
 
     # parse args
 	    print $cgi->p, "\n";
-    if (!getopts('pdceh')) {
+    if (!getopts('pdcleh') || 
+	(defined($opt_l) && !defined($opt_c))) {
 	die "usage: $0 $usage\n";
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
@@ -284,7 +287,7 @@ MAIN: {
     # catch the case of someone using scientific (e or E notation)
     # and convert it into a long decimal value
 	    # strip off leading 0's
-    if ($num =~ /^-?\d*\Q$point\E?\d*[eE]-?\d+$/o &&
+    if ($num =~ /^[eE]-?\d+$/o &&
 	$num !~ /^-?\Q$point\E?[eE]-?\d+$/o) {
 	$num = &exp_number($num, $point);
     #
@@ -326,13 +329,6 @@ MAIN: {
     $integer =~ s/^0+/0/;
     $integer =~ s/^0([1-9])/$1/;
     # split into integer and fractional parts
-#    # now padd integer with 0's so that it becomes an even
-#    # mulitple of 3 digits in length
-#    #
-#    if (length($integer)%3 != 0) {
-#	$integer = ("0" x ((3 - (length($integer)%3)) % 3)) . $integer;
-#    }
-
 	}
 	print $cgi->p, "\n";
     if ($opt_p) {
@@ -352,7 +348,11 @@ MAIN: {
        #
        } else {
 	   power_of_ten(\$integer, $system, $bias);
-	&print_number($sep, $neg, $integer, $point, $fract, 76);
+	if ($opt_l) {
+	    &print_number($sep, $neg, $integer, $point, $fract, 0);
+    # print the number comma/dot separated
+	    &print_number($sep, $neg, $integer, $point, $fract, 76);
+    } elsif ($opt_c) {
 
 	if ($opt_o) {
 	    print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
@@ -484,9 +484,10 @@ sub exp_number($$$)
 sub print_number($$$$$$)
 #	\$fract		fractional part of number (or undef)
     my ($sep, $neg, $integer, $point, $fract, $linelen) = @_;	# get args
-    my @set;	# sets of 3 digits
-    my $whole;	# integer numeric string being formed
-    my $len;	# length of the whole part (including padding, commas, etc.)
+    my $wholelen;	# length of the integer part
+    my $fractlen;	# length of the fractional part
+    my $leadlen;	# length of digits, seperaotrs and - on 1st line
+    my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
     my $intlen = 0;	# length of the integer part without bias
     my $fractlen = 0;	# length of the fractional part
     my $leadlen;	# length of digits, separators and - on 1st line
@@ -505,28 +506,6 @@ sub print_number($$$$$$)
     #
     if (!defined($linelen)) {
 	$linelen = 0;
-    # process a leading -, if needed
-    #
-    if ($neg) {
-	$whole = "-";
-    } else {
-	$whole = "";
-    }
-
-    # split number into sets of 3 digits
-    #
-    while (length($integer) > 3) {
-	push @set, substr($integer, -3, 3);
-	$integer =~ s/^(.*)...$/$1/;
-    }
-    if (length($integer) > 0) {
-	push @set, $integer;
-    }
-
-    # form the integer part of the number into separated 3 digit lists
-    #
-    $whole .= join( $sep, reverse @set );
-
     } elsif ($linelen > 0) {
 	$linelen = int($linelen/4) * 4;
     } else {
@@ -535,9 +514,13 @@ sub print_number($$$$$$)
 
     # no line length specified (or value passed < 4) means just print it
 	if (defined($fract)) {
-	    print $whole . $point . $fract;
 
-	    print $whole;
+	    print $integer;
+	    print $point;
+	    print $fract;
+
+		print $$fract;
+	    print $integer;
 		    while (($bias -= $big_bias) > $big_bias) {
 			print "0" x $big_bias;
 		    }
@@ -545,33 +528,95 @@ sub print_number($$$$$$)
 		print "0" x $bias;
 	    }
 	}
-	# We want the decimal point/comma and separators to
-	# be put at the ends of lines.  We need to determine
-	# how much whitespace we need to add the front so that
-	# this happens.
+
+    # If we have a line length, we need to insert newlines after
+	$wholelen = length($integer);
+	# determine the length of the integer part of the number
 	#
-	$len = length($whole);
-	if ($len % 4 != 3) {
-	    $whole = (" " x (4 - (($len+1) % 4))) . $whole;
-	    $len += 4 - (($len+1) % 4);
+	$wholelen = Math::BigInt->new($intlen);
+	    #
+	} else {
+	    # warnings internal to the BigInt code with the
+	    # division below.  We block these bogus warnings.
+	    #
+	    $^W = 0;
+	    $leadlen += ($wholelen-1)/3;
 	    $^W = $warn;
+	}
+	if ($neg) {
+	    # account for - sign
+	#
+	# warnings internal to the BigInt code with the
+	# modulus below.  We block these bogus warnings.
+	#
+	$^W = 0;
+	$col = ($linelen - (($leadlen+1) % $linelen)) % $linelen;
+	$^W = $warn;
+	print " " x $col;
+
+	# process a leading -, if needed
+		# and the separators to line up in colums (particularly
+	if ($neg) {
+	    if (++$col >= $linelen) {
+		# This could mean that we have a lone - in the 1st line
+		# but there is nothing we can do about that if we want
+		# the decimal point/comma to be at the end of a line
+		# and the separators to line up in columns (particularly
+		# along the right hand edge)
+		print "-\n";
+		$col = 1;
+	    } else {
+	$i = length($integer) % 3;
+		$i = ($intlen+2) % 3;
+	    }
+	    $^W = $warn;
+	} else {
+	print substr($integer, 0, $i);
 	$col += $i;
-	# We will tack on the decimal point/comma followed by
-	# the fractional part.
+	# output , and 3 digits until whole number is exhusted
 	    print substr($$integer, 0, $i), 0 x ($i-$intlen);
-	if (defined($fract)) {
-	    $whole .= ($point . $fract);
-	    $len += 1 + length($fract);
+	while ($i < $wholelen) {
+	    print substr($$integer, 0, $i);
+	}
+
+	# output , and 3 digits until whole number is exhausted
+	#
+	while ($i < $intlen) {
+
+	    # output the separator, we add a newline if the line
+	    # is at or beyond the limit
+	    #
+	    if (++$col >= $linelen) {
+		print "$sep\n";
+		$col = 1;
+	    print substr($integer, $i, 3);
+	    #
+	    if ($i+3 > $intlen) {
 		print substr($$integer, $i, 3), 0 x ($i+3-$intlen);
 	    } else {
-	# We now print linelen chars at a time until the end.
+		print "000";
+		$col += 3;
 	#
-	for ($i=0; $i+$linelen <= $len; $i += $linelen) {
-	    print substr($whole, $i, $linelen), "\n";
-		# print the rest of the faction in linelen chunks
-	print substr($whole, $i);
+	if (defined($fract)) {
+
+	# print the decimal point/comma followed by the fractional
+	# part if needed
+	#
+	if (defined($$fract)) {
+
+	    # print the rest of the faction in linelen chunks
 		#
-    print "\n";
+	    $fractlen = length($fract);
+	    for ($i = 0; $i < $fractlen; $i += $linelen) {
+		print substr($fract, $i, $linelen);
+		print "\n";
+
+
+	# otherwise finish up the integer line
+	} else {
+	    print "\n";
+		# print the rest of the faction in linelen chunks
+		#
 	    }
 	}
     }
@@ -841,7 +886,11 @@ sub power_of_ten($$$)
 }
 #	$integer	intger part of the number
 #	$fract		fractional part of number (or undef)
-#	$system		the number system ('American' or European)
+#
+# XXX - This could be made much faster if we did not split the
+# 	integer part of the number into an array but rather
+#	used subst to extract sets of 3 digits like we do
+#	in print_number().
 #
 sub print_name($$$$)
 #	\$fract		fractional part of number (or undef)
