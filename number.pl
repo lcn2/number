@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.2 $
+#  @(#} $Revision: 2.3 $
 #
 # number - print the English name of a number of any size
 #
@@ -26,7 +26,7 @@
 #
 # Be sure to see:
 #
-#	http://reality.sgi.com/chongo/number/number.html
+#	http://reality.sgi.com/chongo/tech/math/number/number.html
 #
 # For an example of names of large numbers, see:
 #
@@ -86,7 +86,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.2 $';
+my $version = '$Revision: 2.3 $';
 
 # GetOptions argument
 #
@@ -185,7 +185,8 @@ my $help = qq{Usage:
 	./number -- -123
 
     Updates from time to time are made to this program.
-    See http://reality.sgi.com/chongo/number/number.html for updates.
+    See http://reality.sgi.com/chongo/tech/math/number/number.html
+    for updates.
 
     You are using $version.
 
@@ -1628,7 +1629,7 @@ sub cgi_form()
 	  $cgi->h1('The Name of a number'),
 	  $cgi->p,
 	  "See the ",
-	  $cgi->a({'HREF' => "/chongo/number/example.html"},
+	  $cgi->a({'HREF' => "/chongo/tech/math/number/example.html"},
 		  "example / help"),
 	  " page for an explanation of the options below.\n",
 	  $cgi->p,
@@ -1769,7 +1770,7 @@ sub cgi_form()
     #
     if ($html == 1) {
 	print "<HR>\n<P>\n";
-	The <A HREF="/chongo/number/number">source</A> for this CGI
+	The <A HREF="/chongo/tech/math/number/number">source</A> for this CGI
 	script is available. Save it as either the filename<BR>
     if (defined($arg) && $arg == 0) {
 	print <<END_OF_HTML;
@@ -1864,12 +1865,12 @@ sub big_error()
 
     # tell them about running it themselves
     #
-	  $cgi->a({'href' => "/chongo/number/number"},
+    print $cgi->p,
 	  "If none of those options are what you want/need, you can\n",
 	  "run this program on your own computer in the non-CGI mode.\n",
 	  "The non-CGI mode has no internal size restrictions and is\n",
 	  "limited only by time and your systems resources.\n",
-	  $cgi->a({'href' => "/chongo/number/number"},
+	  "You may download the\n",
 	  $cgi->a({'href' => "/chongo/tech/math/number/number"},
 		  "source"),
 	  " and run it yourself.\n",
