@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #!/usr/bin/perl -w
-#  @(#} $Revision: 1.4 $
+#  @(#} $Revision: 1.7 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -63,7 +63,7 @@ use vars qw($opt_p $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.4 $';
+my $version = '$Revision: 1.7 $';
 
 # Warning state
 my $warn = $^W;
@@ -265,71 +265,72 @@ MAIN: {
 	$system = "European";
 	$sep = ".";
 	$point = ",";
-    # read in the number
+    # snarf the number from the entire stdin
 	$system = "American";
-    $num = "";
-    while (<>) {
-	chomp;
-	$num .= $_;
-    }
-	big_err();
-    # strip off all whitespace, leading, trailing, middle ...
-
-    # We limit the size of the input in a arbitrary way.
+    $/ = undef;
+    $num = <>;
+    } elsif ($html == 0) {
+    # Web firewall
     #
-    $num =~ s/\s+//g;
-    if ($num =~ /^$/) {
-	exit(0);
+    if ($html && length($num) > $big_input) {
+	big_err();
+    }
+
+    # strip separators and whitespace
+    #
+    $num =~ s/[\s\Q$sep\E]+//g;
+
     # note if negative or positive
     #
-    # remove sets of 3 separators
+    # We remove any leading - to optimize for the positive case.
     #
-    $num =~ s/\Q$sep\E//og;
+    if ($neg = ($num =~ /^-/)) {
+	$num =~ s/^-//;
+    }
+
+    # strip leading 0's
+    #
+    if ($num =~ /^0/) {
+	if ($num =~ /^00+$/) {
+	    # deal with only 0's case
 	    $num = "0";
-    # catch the case of someone using scientific (e or E notation)
-    # and convert it into a long decimal value
+	} else {
 	    # strip off leading 0's
-    if ($num =~ /^[eE]-?\d+$/o &&
-	$num !~ /^-?\Q$point\E?[eE]-?\d+$/o) {
-	$num = &exp_number($num, $point);
+	    $num =~ s/^0+//;
+	die "$0: numbers may have only one decimal $point\n";
+    }
+
+	exit(0);
     #
     if ($num =~ /\Q$point\E.*\Q$point\E/o) {
-    # verify that we have a real number
+	err("Numbers may have only one decimal $point.");
+    }
     if ($num =~ /^$/) {
-    if ($num !~ /^-?\d*\Q$point\E?\d*$/o || $num =~ /^-?$/) {
-
-	# print error
-	#
-	die "$0: Numbers may only contain digits, ``$sep''s, an optional " .
-	    "``$point'' and optional leading ``-''.\n";
+	$num = "0";
+    }
+	    die "$0: scientific numbers may only have a leading -, digits\n" .
+    # and convert it into a long decimal value.
+    #
+    if ($num =~ /[eE]/) {
+		"$sep's, leading 0's and whitespace characters are ignored.\n";
+	        "Scientific numbers may only have a leading -, digits\n" .
+		"an optional decimal $point (optionally followed by digits)\n" .
+	    die "$0: scientific numbers must at least a digit before the e\n";
+		"optional - and 1 more more digits after the e.  All\n" .
+	$num = &exp_number($num, $point);
 	$num = exp_number($num, $point, \$bias);
 
-    # note if negative or positive
+    # We did not have a number in scientific notation so we have no bias
     #
-    if ($num =~ /^-/) {
-
-	# note negative
-	$neg = 1;
-
-	# split into integer and fractional parts
-	#
-	($integer, $fract) = split /\Q$point\E/, $num;
-	$integer = substr($integer, 1);
-
     } else {
-
-	# note non-negative
-	$neg = 0;
-
-	# split into integer and fractional parts
-	#
-	($integer, $fract) = split /\Q$point\E/, $num;
+	die "$0: A number may only have a leading -, digits and an " .
+	    "optional decimal $point.  All $sep's and whitespace\n" .
+	    "characters and leading 0's are ignored\n";
     #
     if ($num !~ /^[\d\Q$point\E]+$/o || $num =~ /^\Q$point\E$/) {
-    # remove multiple and bogus leading zero's from the integer part
+	err("A number may only have a leading -, digits and an " .
 	       "optional decimal ``$point''.\n" .
-    $integer =~ s/^0+/0/;
-    $integer =~ s/^0([1-9])/$1/;
+	       "All 3 digit separators and" .
     # split into integer and fractional parts
 	}
 	print $cgi->p, "\n";
@@ -343,7 +344,7 @@ MAIN: {
 
        # only allow powers of 10 that are non-negative integers
        #
-	   &power_of_ten($integer, $system);
+	   &power_of_ten(\$integer, $system);
 	    err("The power must be a non-negative integer.");
 
        # print the name
@@ -351,9 +352,9 @@ MAIN: {
        } else {
 	   power_of_ten(\$integer, $system, $bias);
 	if ($opt_l) {
-	    &print_number($sep, $neg, $integer, $point, $fract, 0);
+	    &print_number($sep, $neg, \$integer, $point, \$fract, 0);
     # print the number comma/dot separated
-	    &print_number($sep, $neg, $integer, $point, $fract, 76);
+	    &print_number($sep, $neg, \$integer, $point, \$fract, 76);
     } elsif ($opt_c) {
 
 	if ($opt_o) {
@@ -377,7 +378,7 @@ MAIN: {
 # given:
 #	an equivalent decimal value (non-scientific)
 #		.5e50 or 4E50 or 4.E-49
-sub exp_number($)
+sub exp_number($$)
 #	\$bias	adjusted power of ten bias as a BigInt
     my ($num, $point) = @_;	# get args
     my $exp;	# base 10 exponent (value after the E)
@@ -478,12 +479,12 @@ sub exp_number($$$)
 # usage:
 }
 
-#	$integer	integer part of the number
+
 # print_number - print the number with ,'s or .'s
-#	$fract		fractional part of number (or undef)
+#
 # given:
 #	\$integer	integer part of the number
-sub print_number($$$$$$)
+sub print_number($$\$$\$$)
 #	\$fract		fractional part of number (or undef)
     my ($sep, $neg, $integer, $point, $fract, $linelen) = @_;	# get args
     my $wholelen;	# length of the integer part
@@ -494,8 +495,8 @@ sub print_number($$$$$$)
     my $fractlen = 0;	# length of the fractional part
     my $leadlen;	# length of digits, separators and - on 1st line
     my $fulllen;	# approximate length of the input
-    if ($integer eq "") {
-	$integer = "0";
+    if ($$integer eq "") {
+    my $nonint_bias = 0;    # 1 => $bias is very large, process with care
     my $i;
 
 	$fulllen += int($intlen*4/3);
@@ -515,12 +516,12 @@ sub print_number($$$$$$)
     }
 
     # no line length specified (or value passed < 4) means just print it
-	if (defined($fract)) {
+    # on a single line
 
-	    print $integer, $point, $fract, "\n";
+	    print $$integer, $point, $$fract, "\n";
 
 		print $$fract;
-	    print $integer, "\n";
+	    print $$integer, "\n";
 		    while (($bias -= $big_bias) > $big_bias) {
 			print "0" x $big_bias;
 		    }
@@ -530,7 +531,7 @@ sub print_number($$$$$$)
 	}
 
     # If we have a line length, we need to insert newlines after
-	$wholelen = length($integer);
+	$wholelen = length($$integer);
 	# determine the length of the integer part of the number
 	#
 	$wholelen = Math::BigInt->new($intlen);
@@ -566,12 +567,12 @@ sub print_number($$$$$$)
 		print "-\n";
 		$col = 1;
 	    } else {
-	$i = length($integer) % 3;
+	$i = length($$integer) % 3;
 		$i = ($intlen+2) % 3;
 	    }
 	    $^W = $warn;
 	} else {
-	print substr($integer, 0, $i);
+	print substr($$integer, 0, $i);
 	$col += $i;
 	# output , and 3 digits until whole number is exhusted
 	    print substr($$integer, 0, $i), 0 x ($i-$intlen);
@@ -589,7 +590,7 @@ sub print_number($$$$$$)
 	    if (++$col >= $linelen) {
 		print "$sep\n";
 		$col = 1;
-	    print substr($integer, $i, 3);
+	    print substr($$integer, $i, 3);
 	    #
 	    if ($i+3 > $intlen) {
 		print substr($$integer, $i, 3), 0 x ($i+3-$intlen);
@@ -597,7 +598,7 @@ sub print_number($$$$$$)
 		print "000";
 		$col += 3;
 	#
-	if (defined($fract)) {
+	    }
 
 	# print the decimal point/comma followed by the fractional
 	# part if needed
@@ -606,9 +607,9 @@ sub print_number($$$$$$)
 
 	    # print the rest of the faction in linelen chunks
 		#
-	    $fractlen = length($fract);
+	    $fractlen = length($$fract);
 	    for ($i = 0; $i < $fractlen; $i += $linelen) {
-		print substr($fract, $i, $linelen), "\n";
+		print substr($$fract, $i, $linelen), "\n";
 
 
 	# otherwise finish up the integer line
@@ -764,6 +765,11 @@ sub american_kilo($)
 	$big = Math::BigInt->new($power);
 	latin_root($big-1, $zero);
 	print "llion";
+# usage:
+#	$power		power of 1000
+
+# Prints the name of 1000^$power.
+# european_kilo - return the name of power of 1000 under European system
 #
 # given:
 #	$power	power of 1000
@@ -771,11 +777,6 @@ sub american_kilo($)
 # Prints the name of 1000^$power.
 #
 # The European system uses both "llion" and "lliard" suffixes for
-# usage:
-#	$power		power of 1000
-#
-# Prints the name of 1000^$power.
-#
 sub european_kilo($)
 # is for off powers.
     my $power = $_[0];		# power of 1000
@@ -817,14 +818,14 @@ sub european_kilo($)
 	    print "lliard";
 	}
 # usage:
-#	$power	the power of 10 to name print
+}
 #	$system	the number system ('American' or European)
 # power_of_ten - just print name of a the power of 10
 # BUG: The problem is that this function must perform arithmetic on the
 #      $num argument.  If $power is too large for an integer, we will
 #      fail.  We need to use the BigInt perl module to avoid overflows.
 #
-sub power_of_ten($$)
+sub power_of_ten(\$$)
 # given:
     my ($power, $system) = @_;		# get args
 #	$system	the number system ('American' or 'European')
@@ -837,9 +838,9 @@ sub power_of_ten($$$)
     #
     $one = Math::BigInt->new("1");
 	err("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
-    # Convert $power arg into BigInt format
+    # Convert $$power arg into BigInt format
     #
-    $big = Math::BigInt->new($power);
+    $big = Math::BigInt->new($$power);
 
     # convert the power of 10 into a multipler and a power of 1000
 
