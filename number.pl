@@ -1,6 +1,6 @@
 #!/usr/bin/perl -wT
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.23 $
+#  @(#} $Revision: 1.24 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -72,7 +72,7 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.23 $';
+my $version = '$Revision: 1.24 $';
 
 # Warning state
 my $warn = $^W;
@@ -1280,15 +1280,13 @@ sub cgi_form()
     if ($html == 1) {
 	print "<HR>\n<P>\n";
 	The <A HREF="/chongo/number/number.cgi.txt">source</A> for this CGI
-	script is available.
-	Save it as either the filename <B>number.cgi</B> or <B>number</B>.
-	<p>
-	If you run this program as <B>number</B> (i.e., without the <B>.cgi</B>
-	extension),
-	then it runs as normal program without all of the CGI/HTML stuff.
-	In normal program mode, the program does not enforce an arbitrary
-	size limit.
-	Try <B>./number -h</B> for more information.
+	script is available. Save it as either the filename<BR>
+    if (defined($arg) && $arg == 0) {
+	print <<END_OF_HTML;
+	The Perl script <B>number</B> reads a number from standard input, 
+	The
+	<A HREF="http://www.isthe.com/chongo/tech/math/number/number">source</A>
+	for this CGI script is available. Save it as either the filename<BR>
         <B>number.cgi</B> or <B>number</B>.
         The CGI script <B>number.cgi</B> operates as it is doing now.<BR>
 	The Perl script <B>number</B> reads a number from standard input,
