@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.19 $
-# @(#) $Id: Makefile,v 1.19 1999/10/22 10:23:58 chongo Exp chongo $
+# @(#) $Revision: 1.20 $
+# @(#) $Id: Makefile,v 1.20 1999/10/22 11:26:20 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -31,11 +31,10 @@ INSTALL= install
 
 # locations
 DESTDIR= /usr/local/bin
-SERVERROOT= /usr/local/ns-home
-WWWROOT= ${SERVERROOT}/docs
+SERVERROOT= /web/isthe/chroot
+WWWROOT= ${SERVERROOT}/html
 WWW= ${WWWROOT}/chongo/tech/math/number
 CGIBIN= ${SERVERROOT}/cgi-bin
-EXTCGIBIN= ${WWWROOT}/chongo/cgi-bin
 
 # what to build
 TARGETS= number.cgi number
@@ -60,10 +59,6 @@ install: all
 	-@if [ -d ${CGIBIN} ]; then \
 	    echo "	${INSTALL} -m 0555 number.cgi ${CGIBIN}"; \
 	    ${INSTALL} -m 0555 number.cgi ${CGIBIN}; \
-	fi
-	-@if [ -d ${EXTCGIBIN} ]; then \
-	    echo "${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}"; \
-	    ${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}; \
 	fi
 
 clean:
