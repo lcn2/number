@@ -1,6 +1,6 @@
 #!/usr/bin/perl -wT
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.25 $
+#  @(#} $Revision: 1.26 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -170,8 +170,12 @@ my $help = qq{Usage:
 
     You are using $version.
 
-    BUGS: On the command line, 234e2147483648 fails on some machines
-	  because the exponent is >= 2^31.
+    BUGS: On the command line, numbers in scientific notation with
+	  very large or very negative exponents could fail to produce 
+	  correct results.  Often these failures occur when the exponent
+	  is >= 2^31 or <= -2^31.  This bug will be addressed in a
+	  future version ... when scientific notation values are
+	  no longer converted into decimal numbers internally.
 
     chongo <{chongo,noll}\@{toad,sgi}.com> was here /\\../\\
 };
