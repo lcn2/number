@@ -1,6 +1,6 @@
+#!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#!/usr/bin/perl -wT
-#  @(#} $Revision: 1.27 $
+#  @(#} $Revision: 1.28 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -78,15 +78,14 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.27 $';
+my $version = '$Revision: 1.28 $';
 
 # GetOptions argument
 #
 my %optctl = (
-    "p!" => \$opt_p, "L!" => \$opt_L, "d!" => \$opt_d, "m!" => \$opt_m,
-    "c!" => \$opt_c, "l!" => \$opt_l, "e!" => \$opt_e, "h!" => \$opt_h
+    "p" => \$opt_p, "L" => \$opt_L, "d" => \$opt_d, "m" => \$opt_m,
+    "c" => \$opt_c, "l" => \$opt_l, "e" => \$opt_e, "h" => \$opt_h
 );
-
 
 # Warning state
 my $warn = $^W;
@@ -97,6 +96,8 @@ my $warn = $^W;
 #
 # This digit count is not exact, but serves as a limiter on
 # the length of input as well as the exponent allowed in E notation.
+#
+# XXX - need to re-evaluate this in light of the use of the $bias BigInt
 #
 my $too_big = "5000";   # too many digits for the web
 
@@ -193,6 +194,7 @@ MAIN:
     my $system;		# American or European (but not a Swallow :-))
     my $visit;		# visit counter or error message
     my $num;		# input value
+    my $bias;		# power of 10 bias (as BigInt)
     my $neg;		# 1 => number if < 0
 
     # setup
@@ -221,7 +223,7 @@ MAIN:
 	    trailer(0);
 	    exit(0);
 	}
-    } elsif (!GetOptions(\%optctl)) {
+
 	&error("usage: $0 $usage\n");
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
@@ -327,7 +329,9 @@ MAIN:
 		"an optional decimal $point (optionally followed by digits)\n" .
 	    &error("Scientific numbers must at least a digit before the e.\n");
 		"optional - and 1 more more digits after the e.  All\n" .
-	$num = &exp_number($num, $point);
+	$num = &exp_number($num, $point, \$bias);
+	    err("Scientific numbers must at least a digit before the e.");
+	}
 	$num = exp_number($num, $point, \$bias);
 
     # We did not have a number in scientific notation so we have no bias
@@ -354,6 +358,7 @@ MAIN:
 
        # only allow powers of 10 that are non-negative integers
        #
+	   # XXX - need to oass in the $bias BigInt
 	   &power_of_ten(\$integer, $system);
 	    err("The power must be a non-negative integer.");
 
@@ -362,14 +367,17 @@ MAIN:
        } else {
 	   power_of_ten(\$integer, $system, $bias);
 	if ($opt_l) {
+	    # XXX - need to oass in the $bias BigInt
 	    &print_number($sep, $neg, \$integer, $point, \$fract, 0);
     # print the number comma/dot separated
+	    # XXX - need to oass in the $bias BigInt
 	    &print_number($sep, $neg, \$integer, $point, \$fract, 76);
     } elsif ($opt_c) {
 
 	if ($opt_o) {
 	    print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
 	} else {
+	# XXX - need to oass in the $bias BigInt
 	&print_name($neg, \$integer, \$fract, $system);
 	}
 
@@ -386,18 +394,42 @@ MAIN:
     }
 
     # all done
+    #
+    exit(0);
+}
+
+# exp_number - convert a scientific notation number into an number
+#
+# Given a number in scientific notation, we will attempt to adjust
+# the position of the decimal point/comma so as to reduce the
+# scientific exponent.  For example:
+#
+#	1.234e2
+#
+# would become:
+#
+#	123.4		with a bias of 0
+#
+# It is not always possible to fully adjust the scientific exponent
+# into a 0 bias.  For example:
+#
+#	12345.6e-10
+#
+# would become:
 #
 #	.123456		with a bias of -5
 #
 # This function will not adjust the decimal point/comma to beyond
+# the left or right hand side of the digit string.
 #
 # given:
-#	an equivalent decimal value (non-scientific)
+#	$num	contains a string with something like -3.5e70 or
 #		.5e50 or 4E50 or 4.E-49
-sub exp_number($$)
+sub exp_number($$\$)
 #	\$bias	adjusted power of ten bias as a BigInt
-    my ($num, $point) = @_;	# get args
-    my $exp;	# base 10 exponent (value after the E)
+#
+# returns:
+#	adjusted non-scientific notation string
 #
 sub exp_number($$$)
 {
@@ -405,7 +437,8 @@ sub exp_number($$$)
     my $expstr;	# base 10 exponent (value after the E) as a string
     my $exp;	# base 10 exponent (value after the E) as a BigInt
     my $lead;	# lead digits (before the E)
-    ($lead, $exp) = split(/[Ee]/, $num);
+    my $int;	# integer part of lead
+    my $frac;	# fractional part of lead
 
     #
     if ($exp == 0) {
@@ -426,27 +459,25 @@ sub exp_number($$$)
 	}
 
     # If we need to move the decimal point/comma to the right, then
-	# tack the $frac onto the end of the $int part.  We
-	# then add more 0's onto the end of $int as needed.
+    # we do so by moving digits from $fract onto the end of $int and
+    # adding more 0's onto the end of $int as needed.
     #
     if ($exp > 0) {
 
 	# If we have more exp than $frac digits, then just
 	# tack the $frac onto the end of the $int part.  This
 	# will result in power of ten bias > 0.
-	    $exp -= length($frac);
+	#
 	if (length($frac) <= $exp) {
-
-	    # add on more 0's if and as needed
-	    #
-	    $int .= '0' x $exp;
 
 	    # move all $frac digits to the left of decimal point/comma
 	    #
 	    $int .= $frac;
 	    $$bias = $exp - length($frac);
-	    $int .= substr($frac, 0, $exp);
-	    $frac = substr($frac, $exp);
+	    $frac = "";
+
+	# we have fewer exp than $frac digits, so we will move
+	    $$bias = 0;
 	#
 	} else {
 	    # we use $expstr because we know that it is a small value
@@ -454,10 +485,6 @@ sub exp_number($$$)
 	    $frac = substr($frac, $expstr);
 	    $$bias = $zero;
 	}
-
-	# switch the negative exp to mean shift left count
-	#
-	$exp = -$exp;
 
 	# limit the size of the input in a arbitrary way when in CGI/HTML mode
 	#
@@ -467,27 +494,25 @@ sub exp_number($$$)
 
     # If we need to move the decimal point/comma to the left, then
     # we do so by moving digits from the end of $int onto the front
-	# and set $int to 0.  We then add more 0's onto the
-	# front of $frac as needed.
+    # if $frac and adding more 0's on the front of $frac as needed.
+    #
     } elsif ($exp < 0) {
-	if (length($int) <= $exp) {
+
 	# If we have more exp than $int digits, then we just
 	# tack the $int part onto the front of the $int part
 	# and set $int to 0.  This will result in a power of
+	    $$bias = $exp + length($frac);
 	#
-	    $exp -= length($int);
 	if (length($int) <= -$exp) {
-
-	    # add on more 0's if and as needed
-	    #
-	    $frac = ('0' x $exp) . $frac;
 
 	    # move all $int digits to the right of decimal point/comma
 	    #
 	    $$bias = $exp + length($int);
 	    $frac = $int . $frac;
-	    $frac = substr($int, -$exp) . $frac;
-	    $int = substr($int, 0, length($int)-$exp);
+	    $int = "0";
+
+	# we have fewer exp than $int digits, so we will move
+	    $$bias = 0;
 	#
 	} else {
 	    # we use $expstr because we know that it is a small value
