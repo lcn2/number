@@ -1,5 +1,6 @@
+#!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.12 $
+#  @(#} $Revision: 2.13 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,7 +86,7 @@ use Getopt::Long;
 use CGI;
 
 # version
-my $version = '$Revision: 2.12 $';
+my $version = '$Revision: 2.13 $';
 
 # GetOptions argument
 #
@@ -395,6 +396,9 @@ MAIN:
 	err("A number may only have a leading -, digits and an " .
 	       "optional decimal ``$point''.\n" .
 	       "All 3 digit separators and" .
+	       "whitespace characters and leading 0's are ignored.");
+    }
+
     # split into integer and fractional parts
     #
     ($integer, $fract) = split /\Q$point\E/, $num;
@@ -1521,6 +1525,8 @@ sub print_name($$$$$)
 		    european_kilo($cnt3);
 		}
 	    }
+	}
+    }
 
     # print after the decimal point if needed
     #
@@ -1532,28 +1538,56 @@ sub print_name($$$$$)
 	#
 	if (!$opt_o) {
 	    print "\n";
+	}
+	if ($system eq 'American') {
+	    print "point";
+	} else {
+	    print "comma";
+	}
 	if ($opt_o) {
 	    print " ";
 	} else {
 	    print "\n";
 	    $len = 0;
+	}
+
+	# if biased, print off leading zero's
 	#
-		print " ";
+	#
 	while ($bias++ < 0) {
-		print "\n";
+	    my $zero = $digit[0];		# zero digit
+	    my $diglen = length($zero)+1;	# length of zero name + space
+
+	    if ($opt_o) {
+		print " $zero";
+	    } else {
+		if ($len <= 0) {
+		    print $zero;
+		    $len = $diglen - 1;
+		} elsif ($len + $diglen < 80) {
 		    print " $zero";
-	    print $digit[0];
 		    $len += $diglen;
 		} else {
 		    print "\n$zero";
 		    $len = $diglen - 1;
 		}
+	    }
+	}
+
 	# list off the digits
-		print " ";
+	#
 	for ($i=0; $i < length($$fract); ++$i) {
-		print "\n";
+	    my $dig = $digit[ substr($$fract, $i, 1) ];	# the digit to print
+	    my $diglen = length($dig)+1;		# length of digit + ' '
+
+	    if ($opt_o) {
+		print " $dig";
+	    } else {
+		if ($len <= 0) {
+		    print $dig;
+		    $len = $diglen - 1;
+		} elsif ($len + $diglen < 80) {
 		    print " $dig";
-	    print  $digit[ substr($$fract, $i, 1) ];
 		    $len += $diglen;
 		} else {
 		    print "\n$dig";
