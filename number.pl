@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.10 $
+#  @(#} $Revision: 1.11 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -44,6 +44,11 @@
 # OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
 #
+# With many thanks for Latin suggestions from:
+#
+#			Jeff Drummond
+#			jjd at sgi.com
+#
 # Comments, suggestions, bug fixes and questions about these routines
 # are welcome.  Send EMail to the address given below.
 #
@@ -65,7 +70,7 @@ use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.10 $';
+my $version = '$Revision: 1.11 $';
 
 # Warning state
 my $warn = $^W;
@@ -79,8 +84,8 @@ my $dash = "";
 my @l_unit = ( "" , qw( un do tre quattuor quin sex septen octo novem ));
 my @l_ten = ("", qw( deci viginti triginti quadraginti quinquaginti
 		     sexaginti septuaginti octoginti nonaginti ));
-my @l_hundred = ("", qw( centi ducenti trecenti quadringenti quingenti
-		         sescenti septingenti octingenti nongenti ));
+my @l_hundred = ("", qw( cent ducent trecent quadringent quingent
+		         sescent septingent octingent nongent ));
 my @l_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
 
 # English names - names from 0 thru 999
@@ -629,15 +634,24 @@ sub latin_root($$)
 	#
 	# instead of:
 	#
-	# add one the milia as needed
+	# add one the millia as needed
 	#
 	if ($i < $len-1) {
 	    if ($opt_m && $i < $len-2) {
-		print "milia^", $len-$i-1, "$dash";
+		print "millia^", $len-$i-1, "$dash";
 		if ($millia_cnt > 1) {
-		print "milia$dash" x ($len-$i-1);
+		print "millia$dash" x ($len-$i-1);
 		if ($nonint_millia) {
 		    while (($millia_cnt -= $big_bias) > $big_bias) {
+			print "millia$dash" x $big_bias;
+		    }
+    # If we ended with the ten's place being 0, then we need
+    # to emit a 't' so that centiunillion becomes centiuntillion
+	    }
+    if ($d2 == 0 && $d1 == 0) {
+    #
+    } elsif ($d2 == 0) {
+    #
     #	trecen-dec-tillion
     #
     if (defined($d2) && $d2 == 1) {
