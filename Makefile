@@ -1,5 +1,5 @@
 #!/bin/make
-#  @(#} $Revision: 1.6 $
+#  @(#} $Revision: 1.7 $
 #  @(#} RCS control in //prime.corp/usr/local/src/cmd/number/Makefile
 #
 # number - number makefile
@@ -30,4 +30,4 @@ install: all
 clean:
 
 clobber: clean
-	rm -f number
+	rm -f number number.cgi
