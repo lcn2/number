@@ -1,6 +1,5 @@
-#!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.5 $
+#  @(#} $Revision: 2.4 $
 #
 # number - print the English name of a number of any size
 #
@@ -71,7 +70,7 @@
 #
 #			Landon Curt Noll
 #
-#			number-mail@asthe.com
+#			number-mail at asthe dot com
 #			http://www.isthe.com/chongo
 #
 # chongo was here	/\../\
@@ -86,7 +85,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.5 $';
+my $version = '$Revision: 2.4 $';
 
 # GetOptions argument
 #
@@ -190,7 +189,7 @@ my $help = qq{Usage:
 
     You are using $version.
 
-    chongo <number-mail\@asthe.com> was here /\\../\\
+    chongo <number-mail at asthe dot com> was here /\\../\\
 };
 
 # main
@@ -265,7 +264,7 @@ MAIN:
 	    &error("-c conflicts with either -l and/or -p");
 
 	    &error("You may only print decimal digits when the <I>Type of " .
-	        "input</I> is <B>just a number</B>.");
+    #
     if ($opt_c && ($opt_l || $opt_p)) {
 	if ($html == 0) {
 	    err("-c conflicts with either -l and/or -p");
@@ -1236,13 +1235,14 @@ sub power_of_ten($$$)
 	#
 	print "one";
 
-		&error("Scientific notation is now support for powers of 10\n" .
-		  "at this time. Try using <B>Latin powers</B> or enter the\n" .
-		       "number without scientific notation.");
+		&error("Scientific notation is not supported for powers\n" .
+
+	# firewall
 	#
-		&error("Scientific notation is now support for powers of 10\n" .
-		       "at this time.  Try using Latin powers or enter the\n" .
-		       "number without scientific notation.");
+		&error("Scientific notation is not supported for powers of" .
+	    if ($html) {
+		err("Scientific notation is not supported for powers\n" .
+		  "of 10 at this time. Try using <B>Latin powers</B> or enter" .
 		  " the\nnumber without scientific notation.");
 	    } else {
 		err("Scientific notation is not supported for powers of" .
@@ -1625,13 +1625,20 @@ sub cgi_form()
 	"power" => " millia^7 (compact form)"
     print $cgi->header,
 	  $cgi->start_html('title' => 'The Name of a Number',
-			 'bgcolor' => '#80a0c0'),
+			 'bgcolor' => '#98B8D8'),
 	  $cgi->h1('The Name of a number'),
 	  $cgi->p,
 	  "See the ",
-	  $cgi->a({'HREF' => "/chongo/tech/math/number/example.html"},
+	  $cgi->a({'HREF' =>
+	  -title => 'The English name of a number',
 		  "example / help"),
 	  " page for an explanation of the options below.\n",
+	  $cgi->br,
+	  "See also the ",
+	  $cgi->a({'HREF' =>
+	  	  "http://www.isthe.com/chongo/tech/math/number/example.html"},
+		  "English name of a number home page"),
+	  ".",
 	  $cgi->p,
 	  $cgi->start_form,
 	  "Type of input:",
@@ -1770,8 +1777,9 @@ sub cgi_form()
     #
     if ($html == 1) {
 	print "<HR>\n<P>\n";
-	The <A HREF="/chongo/tech/math/number/number">source</A> for this CGI
-	script is available. Save it as either the filename<BR>
+
+    # display how to get to the source
+    #
     if (defined($arg) && $arg == 0) {
 	print <<END_OF_HTML;
 	<P>
@@ -1787,6 +1795,8 @@ sub cgi_form()
 	<P>
 	<HR>
 END_OF_HTML
+    }
+
     print <<END_OF_HTML;
     &lt; was here &gt;
     Brought to you by:
