@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.15 $
-# @(#) $Id: Makefile,v 1.15 1999/10/11 10:17:39 chongo Exp chongo $
+# @(#) $Revision: 1.16 $
+# @(#) $Id: Makefile,v 1.16 1999/10/11 13:17:41 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -30,7 +30,7 @@ SHELL= /bin/sh
 DESTDIR= /usr/local/bin
 WWWROOT= /usr/local/ns-home/docs
 WWW= ${WWWROOT}/chongo/number
-TARGETS= number.cgi.txt number.cgi number
+TARGETS= number.cgi number
 
 all: ${TARGETS}
 
