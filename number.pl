@@ -1,6 +1,6 @@
 #!/usr/bin/perl -wT
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 1.24 $
+#  @(#} $Revision: 1.25 $
 #
 # number - print the English name of a number in non-HTML form
 #
@@ -10,7 +10,7 @@
 #	-p	input is a power of 10
 #	-L	input is a Latin power of 1000
 #	-d	add dashes to help with pronunciation
-#	-m	output name in a more compact exponentation form
+#	-m	output name in a more compact exponential form
 #	-c	output number in comma/dot form
 #	-l	output number on a single line
 #	-e	use European instead of American name system
@@ -49,6 +49,11 @@
 #			Jeff Drummond
 #			jjd at sgi.com
 #
+# as well as thanks to these people for their bug reports on earler versions:
+#
+#	Dr K.M. Briggs		Fredrik Mansfeld
+#	kmb28 at cus.cam.ac.uk	fredrik at abaris.se
+#
 # Comments, suggestions, bug fixes and questions about these routines
 # are welcome.  Send EMail to the address given below.
 #
@@ -67,12 +72,21 @@
 use strict;
 use Math::BigInt;
 use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
-use Getopt::Std;
+#use Getopt::Std;
+use Getopt::Long;
 # CGI requirements
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.24 $';
+my $version = '$Revision: 1.26 $';
+
+# GetOptions argument
+#
+my %optctl = (
+    "p!" => \$opt_p, "L!" => \$opt_L, "d!" => \$opt_d, "m!" => \$opt_m,
+    "c!" => \$opt_c, "l!" => \$opt_l, "e!" => \$opt_e, "h!" => \$opt_h
+);
+
 
 # Warning state
 my $warn = $^W;
@@ -119,7 +133,7 @@ my $cgi = 0;		# CGI object, if invoked as a CGI script
 
 # usage and help
 #
-my $usage = "number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]";
+my $usage = "number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [[--] number]";
 my $help = qq{Usage:
 
     $0 $usage
@@ -132,24 +146,32 @@ my $help = qq{Usage:
 	-l	output number on a single line
 	-e	use European instead of American name system
 	-h	print a help message only
+	--	the arg that follows is a number (useful if number is <0)
 
     If number is not given on the command line it is read from standard
     input.
 
     All whitespace (including newlines), commas and periods
-    are ignored, with the exceptiion of a single (optinal)
+    are ignored, with the exception of a single (optinal)
     decimal point (or decimal comma if european name system),
     which if found will be processed.  In the case of reading from
     standard input, all valid data found on standard input will be
     considered as if it were a single number.
 
-    A number may be either a in decimal or in scientific notation (e.g.,
+    A number may be either in decimal or in scientific notation (e.g.,
     2.5e100).  Negative and floating point numbers are allowed.
+    Be careful when using negative on the command line.  One must give
+    an -- argument so as to not confuse command parsing.  E.g.:
+
+	./number -- -123
 
     Updates from time to time are made to this program.
     See http://reality.sgi.com/chongo/number/number.html for updates.
 
     You are using $version.
+
+    BUGS: On the command line, 234e2147483648 fails on some machines
+	  because the exponent is >= 2^31.
 
     chongo <{chongo,noll}\@{toad,sgi}.com> was here /\\../\\
 };
@@ -192,7 +214,10 @@ MAIN:
 	}
 	if (! defined $num) {
 	    print $cgi->p, "\n";
-    } elsif (!getopts('pLdmcleh')) {
+	    trailer(0);
+	    exit(0);
+	}
+    } elsif (!GetOptions(\%optctl)) {
 	&error("usage: $0 $usage\n");
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
@@ -817,11 +842,11 @@ sub european_kilo($)
 	&latin_root($power/2);
 	print "llion";
 
-    # Odd roots use "llaird"
+    # Odd roots use "lliard"
     #
     } elsif ($power % 2 == 1) {
 	&latin_root(int($power/2));
-	print "llaird";
+	print "lliard";
 	# Odd roots use "lliard"
 	#
 	} else {
@@ -924,7 +949,7 @@ sub power_of_ten($$$)
 	    print " ";
 	    latin_root($kilo_power, $biasmillia);
 	    &latin_root($kilo_power);
-	    print "llaird";
+
 	# Odd roots use "lliard"
 	#
 	} else {
@@ -1283,7 +1308,7 @@ sub cgi_form()
 	script is available. Save it as either the filename<BR>
     if (defined($arg) && $arg == 0) {
 	print <<END_OF_HTML;
-	The Perl script <B>number</B> reads a number from standard input, 
+	<P>
 	The
 	<A HREF="http://www.isthe.com/chongo/tech/math/number/number">source</A>
 	for this CGI script is available. Save it as either the filename<BR>
