@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.13 $
+#  @(#} $Revision: 1.14 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -68,9 +68,11 @@ use strict;
 use Math::BigInt;
 use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
+# CGI requirements
+use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.13 $';
+my $version = '$Revision: 1.14 $';
 
 # Warning state
 my $warn = $^W;
@@ -101,6 +103,10 @@ my @ten = qw(zero ten twenty thirty forty
 my @twenty = qw(ten eleven twelve thirteen fourteen
 		fifteen sixteen seventeen eighteen nineteen);
 
+# CGI / HTML variables
+#
+my $html = 0;		# 1 => be are being invoked as a CGI script
+
 # usage and help
 #
 my $usage = "number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]";
@@ -109,7 +115,7 @@ my $help = qq{Usage:
     $0 $usage
 
 	-p	input is a power of 10
-	-L	inout is a Latin power of 1000
+	-L	input is a Latin power of 1000
 	-d	add dashes to help with pronunciation
 	-m	output name in a more compact exponentation form
 	-c	output number in comma/dot form
@@ -124,7 +130,7 @@ my $help = qq{Usage:
     are ignored, with the exceptiion of a single (optinal)
     decimal point (or decimal comma if european name system),
     which if found will be processed.  In the case of reading from
-    standard input, all valid data found on standard input will be 
+    standard input, all valid data found on standard input will be
     considered as if it were a single number.
 
     A number may be either a in decimal or in scientific notation (e.g.,
@@ -140,7 +146,7 @@ my $help = qq{Usage:
 
 # main
 #
-MAIN: 
+MAIN:
 {
     # my vars
     #
@@ -152,15 +158,32 @@ MAIN:
     my $visit;		# visit counter or error message
     my $num;		# the number with ,'s removed
     my $neg;		# 1 => number if < 0
+    my $q;		# CGI object, if invoked as a CGI script
 
     # setup
     #
     select(STDOUT);
     $| = 1;
 
-    # parse args
+    # determine if we are CGI based
+    #
+    if ($0 =~ /\.cgi$/) {
+
+	# we are a CGI script, web restictions apply
+	$html = 1;
+
+	# CGI setup
+	#
+	$q = new CGI;
+	$q->use_named_parameters(1);
+	    print "Content-type: text/plain\n\n";
+	    print "Your browser sent bad or too much data!\n";
+	    print "Error: ", cgi_error(), "\n";
+	&cgi_form($q);
+	}
+    # non-XGI parsed args
 	    print $cgi->p, "\n";
-    if (!getopts('pLdmcleh')) {
+    } elsif (!getopts('pLdmcleh')) {
 	die "usage: $0 $usage\n";
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
@@ -1031,6 +1054,153 @@ sub print_3($)
 
 	# save the 3 digit name
 	#
+	$english_3[$number] = $name_3;
+    }
+
+# cgi_form - print the CGI HTML form
+    #
+# usage:
+#	\$q	CGI object
+#
+sub cgi_form(\$)
+# cgi_form - print the CGI/HTML form
+    my ($q) = @_;		# CGI object
+
+#
+# returns:
+#	$num	input value
+#
+sub cgi_form()
+	"latin" => " Latin power (1000^(number+1))"
+    # radio label sets
+    #
+    my %input_label = (
+	"digit" => " Decimal digits"
+	"exp" => " Power of 10",
+	"latin" => " Latin power (1000^number)"
+    );
+    my %output_label = (
+	"name" => " English name",
+	"digit" => " Decimal digits if input is just a number"
+    );
+	"power" => " millia^7"
+	"usa" => " American system",
+	"europe" => " European system"
+    );
+    my %millia_label = (
+	"dup" => " milliamillia...",
+	"power" => " millia^7 (compact form)"
+    print $q->header,
+	  $q->start_html('title' => 'The Name of a Number',
+			 'bgcolor' => '#80a0c0'),
+	  $q->h1('The Name of a number'),
+	  $q->p,
+	  "<UL>\n",
+	  "<LI> The number may be <I>almost</I> of any length.\n",
+	  "<LI> The number given may be negative or positive.\n",
+	  "<LI> Both whole &amp; floats are allowed (e.g.: ",
+	  "<TT>21701</TT> and <TT>2.71828</TT>).\n",
+	  "<LI> Whitespace, digit group separators and newlines are ignored.\n",
+	  "<LI> Scientific notation is allowed (e.g.: ",
+	  "<TT>1e303</TT>, <TT>-3.1415e70</TT>).\n",
+	  "</UL>\n",
+	  $q->p,
+	  $q->start_form,
+	  $q->b('<FONT SIZE="+1">Enter a number:</FONT>'),
+	  $q->br,
+	  $q->textarea('name' => 'number',
+		       'rows' => '10',
+		       'columns' => '60'),
+	  $q->p,
+	  "Type of input:",
+	  "&nbsp;" x 4,
+	  $q->radio_group('name' => 'input',
+			  'values' => ['number', 'exp', 'latin'],
+			  'labels' => \%input_label,
+			  'default' => 'number'),
+	  $q->br,
+	  "Type of output:",
+	  "&nbsp;" x 2,
+	  $q->radio_group('name' => 'output',
+			  'values' => ['name', 'digit'],
+			  'labels' => \%output_label,
+			  'default' => 'name'),
+	  $q->br,
+	  "Name system:",
+	  "&nbsp;" x 4,
+	  $q->radio_group('name' => 'system',
+			  'values' => ['usa', 'europe'],
+			  'labels' => \%system_label,
+			  'default' => 'usa'),
+	  $q->br,
+	  "Millia styie:",
+	  "&nbsp;" x 8,
+	  $q->radio_group('name' => 'millia',
+			  'values' => ['dup', 'power'],
+			  'labels' => \%millia_label,
+			  'default' => 'dup'),
+	  $q->br,
+	  "Dash styie:",
+	  "&nbsp;" x 10,
+	  $q->radio_group('name' => 'hash',
+			  'values' => ['nodash', 'dash'],
+			  'labels' => \%dash_label,
+			  'default' => 'nodash'),
+	  $q->p,
+	  $q->submit(name=>'Name that number'),
+	  " &nbsp;&nbsp;\n",
+	  $q->reset('name' => 'Clear'),
+	  $q->end_form,
+	  $q->hr;
+    print $cgi->textarea(-name => 'number',
+    # XXX
+    &trailer(0);
+    exit(0);
+	$opt_d = 1;		# assume -d (use -'s in names)
+    }
+
+    # return the number
+# usage:
+#	trailer(0)
+}
+
+# if surpressed.
+#
+sub trailer()
+#	$arg	1 => suppress message about obtaining the source
+#
+# If the arg passed is 1, then the message about obtaining the source
+    if ($html == 1) {
+    print <<END_OF_HTML;
+    <p>
+    The <a href="/chongo/number/number.cgi.txt">source</a> for this CGI
+    script is available.
+    Save it as either <B>number.cgi</B> and/or <B>number</B>.
+    <p>
+    If you run this program as <B>number</B> *without the <B>.cgi</B> 
+    extension), 
+    then it runs as normal program without all of the CGI/HTML stuff.
+    In normal program mode, the program does not enforce an arbitrary 
+    size limit.
+    Try <b>./number -h</b> for more information.
+    <p>
+    <hr>
+	The Perl script <B>number</B> reads a number from standard input,
+	has no size limits<BR>
+	and does not perform any CGI/HTML actions.
+	Try <B>./number -h</B> for more info.
+    <p>
+	<HR>
+    </p>
+    <blockquote>
+    <a href="http://reality.sgi.com/chongo/index.html">chongo</a>
+    &lt; was here &gt;
+    <strong>/\\oo/\\</strong>
+    </blockquote>
+    Landon Curt Noll
+    </body>
+    </html>
+    &lt; was here &gt;
 	print $cgi->hr, "\n";
 	print $cgi->p, "\n";
     }
