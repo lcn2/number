@@ -49,7 +49,7 @@
 #			Jeff Drummond
 #			jjd at sgi.com
 #
-# as well as thanks to these people for their bug reports on earler versions:
+# as well as thanks to these people for their bug reports on earlier versions:
 #
 #	Dr K.M. Briggs		Fredrik Mansfeld
 #	kmb28 at cus.cam.ac.uk	fredrik at abaris.se
@@ -91,16 +91,10 @@ my %optctl = (
 my $warn = $^W;
 
 # We setup this arbitrary limit so that people to not enter
-# very large numbers and drive that server crazy.  The algoritm
+# very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
-# This digit count is not exact, but serves as a limiter on
-# the length of input as well as the exponent allowed in E notation.
-#
-# XXX - need to re-evaluate this in light of the use of the $bias BigInt
-#	and re-evaluate all of the logic that uses this limit value
-#
-my $too_big = "5000";   # too many digits for the web
+my $big_input = "5000"; # too many input digits for the web
 my $big_bias = 1000000; # too much output for the web (must be < 2^31)
 
 # misc BigInt
@@ -148,7 +142,7 @@ my $help = qq{Usage:
 	-p	input is a power of 10
 	-l	input is a Latin power of 1000
 	-d	add dashes to help with pronunciation
-	-m	output name in a more compact exponentation form
+	-m	output name in a more compact exponentiation form
 	-c	output number in comma/dot form
 	-o	output number on a single line
 	-e	use European instead of American name system
@@ -177,13 +171,6 @@ my $help = qq{Usage:
 
     You are using $version.
 
-    BUGS: On the command line, numbers in scientific notation with
-	  very large or very negative exponents could fail to produce
-	  correct results.  Often these failures occur when the exponent
-	  is >= 2^31 or <= -2^31.  This bug will be addressed in a
-	  future version ... when scientific notation values are
-	  no longer converted into decimal numbers internally.
-
     chongo <{chongo,noll}\@{toad,sgi}.com> was here /\\../\\
 };
 
@@ -207,6 +194,17 @@ MAIN:
     #
     select(STDOUT);
     $| = 1;
+
+    # set the defaults
+    #
+    $opt_p = 0;
+    $opt_l = 0;
+    $opt_d = 0;
+    $opt_m = 0;
+    $opt_c = 0;
+    $opt_o = 0;
+    $opt_e = 0;
+    $opt_h = 0;
 
     # determine if we are CGI based
     #
@@ -236,14 +234,14 @@ MAIN:
     #	    on the command line.
     #
     } elsif (!GetOptions(%optctl)) {
-    if (defined($opt_h)) {
+	err("usage: $0 $usage");
 	exit(1);
     }
 
     # Print help if that is all that is required
     #
     if ($opt_h) {
-    if (defined($opt_c) && (defined($opt_l) || defined($opt_p))) {
+	print $help;
 	exit(0);
 	    &error("-c conflicts with either -l and/or -p");
 
@@ -254,7 +252,7 @@ MAIN:
 	    err("-c conflicts with either -l and/or -p");
 	} else {
 	    err("You may only print decimal digits when the <I>Type of " .
-    if (defined($opt_d)) {
+	        "input</I>\nis <B>just a number</B>.");
 	}
     }
 
@@ -263,7 +261,7 @@ MAIN:
     if ($opt_d) {
 
 	# print -'s between useful parts of the name
-    if (defined($opt_e)) {
+	#
 	$dash = "-";
     }
 
@@ -310,7 +308,7 @@ MAIN:
 	    $num = "0";
 	} else {
 	    # strip off leading 0's
-    if ($html == 1 && length($num) >= $too_big) {
+    if ($html == 1 && length($num) >= $big_input) {
 	&big_error();
     }
 	    $num =~ s/^0+//;
@@ -480,12 +478,6 @@ sub exp_number($$$)
     ($int, $frac) = split(/\Q$point\E/, $lead);
     $frac = "" if !defined($frac);
 
-	# limit the size of the input in a arbitrary way when in CGI/HTML mode
-	#
-	if ($html == 1 && $exp >= $too_big) {
-	    &big_error();
-	}
-
     # If we need to move the decimal point/comma to the right, then
     # we do so by moving digits from $fract onto the end of $int and
     # adding more 0's onto the end of $int as needed.
@@ -512,12 +504,6 @@ sub exp_number($$$)
 	    $int .= substr($frac, 0, $expstr);
 	    $frac = substr($frac, $expstr);
 	    $$bias = $zero;
-	}
-
-	# limit the size of the input in a arbitrary way when in CGI/HTML mode
-	#
-	if ($html == 1 && $exp >= $too_big) {
-	    &big_error();
 	}
 
     # If we need to move the decimal point/comma to the left, then
@@ -565,7 +551,7 @@ sub exp_number($$$)
 #
 # given:
 #	$sep		, or . set of 3 digit separators
-#			    notation converstion
+#	$neg		1 => number is negative, 0 => non-negative
 #	\$integer	integer part of the number
 sub print_number($$\$$\$$$)
 #	\$fract		fractional part of number (or undef)
@@ -574,7 +560,7 @@ sub print_number($$\$$\$$$)
 #			    notation conversion
     my $intlen;		# length of the integer part without bias
     my $fractlen;	# length of the fractional part
-    my $leadlen;	# length of digits, seperaotrs and - on 1st line
+{
     my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
     my $wholelen;	# length of the integer part as modified by bias
     my $intlen = 0;	# length of the integer part without bias
@@ -660,9 +646,6 @@ sub print_number($$\$$\$$$)
 		if ($nonint_bias) {
 		    while (($bias -= $big_bias) > $big_bias) {
 			print "0" x $big_bias;
-	# end of the number
-	print "\n";
-
 		    }
 		}
 		print "0" x $bias;
@@ -702,7 +685,7 @@ sub print_number($$\$$\$$$)
 	print " " x $col;
 
 	# process a leading -, if needed
-		# and the separators to line up in colums (particularly
+	#
 	if ($neg) {
 	    if (++$col >= $linelen) {
 		# This could mean that we have a lone - in the 1st line
@@ -738,7 +721,7 @@ sub print_number($$\$$\$$$)
 	    $i = 3;
 	}
 	$col += $i;
-	# output , and 3 digits until whole number is exhusted
+	if ($i > $intlen) {
 	    print substr($$integer, 0, $i), 0 x ($i-$intlen);
 	} else {
 	    print substr($$integer, 0, $i);
@@ -853,6 +836,9 @@ sub print_number($$\$$\$$$)
 
 		# print the rest of the faction in linelen chunks
 		#
+		for ($i = 0; $i < $fractlen; $i += $linelen) {
+		    print substr($$fract, $i, $linelen), "\n";
+		}
 	    }
 	}
     }
@@ -1003,7 +989,7 @@ sub latin_root($$)
 			print "millia$dash" x $big_bias;
 		    }
 		}
-    # instead of the usual 'ti'.  This is decause we say:
+		print "millia$dash" x $millia_cnt;
 	    }
 	}
     }
@@ -1131,7 +1117,7 @@ sub european_kilo($)
     }
 }
 
-#	$bias	power of 10 bias (as BigInt) during de-sci notation converstion
+
 # power_of_ten - just print name of a the power of 10
 sub power_of_ten(\$$$)
 # given:
@@ -1165,7 +1151,7 @@ sub power_of_ten($$$)
 	$big *= 100;
     }
 
-    # convert the power of 10 into a multipler and a power of 1000
+    }
 
     # Convert $$power arg into BigInt format
     #
@@ -1176,7 +1162,7 @@ sub power_of_ten($$$)
 	    $big *= 10;
 	$kilo_power = $big + 1;
 	    $big *= 100;
-	# under -l, our miltiplier name is always one
+	}
 
 	# under -l, we deal with powers of 1000 above 1000
 	#
@@ -1190,7 +1176,7 @@ sub power_of_ten($$$)
 	$kilo_power = ($big - $mod3) / 3;
 	# Some BigInt implementations issue uninitialized
 	# bdiv below.  We block these bogus warnings.
-	# print the multipler name
+	#
 	$^W = 0;
 	($kilo_power, $mod3) = $big->bdiv(3);
 	$^W = $warn;
@@ -1245,7 +1231,7 @@ sub power_of_ten($$$)
 	if (($kilo_power % 2) == 0) {
 
 	    # kilo_power is even so kilo_power,biasmillia is even
-	    # If we have biasmillia, then the kilo_power,biasmillia combination 
+	    #
 	    $kilo_power /= 2;
 	    $mod2 = 0;
 
@@ -1287,11 +1273,11 @@ sub power_of_ten($$$)
     }
     print "\n";
 }
-#	\$integer	intger part of the number
+
 
 # print_name - print the name of a number
 #
-#			    notation converstion
+# given:
 #	$neg		1 => number is negative, 0 => non-negative
 sub print_name($\$\$$$)
 #	\$fract		fractional part of number (or undef)
@@ -1341,7 +1327,7 @@ sub print_name($$$$$)
 
     # For a bias > 0, we want that bias to be a multiple of 3
     # so that we can add it to the 1st arg (power of 1000) of
-	
+    # either american_kilo() or european_kilo().
     #
     # We any bias % 3 and 'move' to the integer by adding 1 or 2 0's
 	# compute $bias % 3 and make $bias a multiple of 3
@@ -1564,7 +1550,7 @@ sub cgi_form()
 	  "See the ",
 	  $cgi->a({'HREF' => "/chongo/number/example.html"},
 		  "example / help"),
-	  " page for an explination of the options below.\n",
+	  " page for an explanation of the options below.\n",
 	  $cgi->p,
 	  $cgi->start_form,
 	  "Type of input:",
@@ -1660,7 +1646,7 @@ sub cgi_form()
 	#
 	print $cgi->hr,
 	      $cgi->p;
-	if (defined($opt_c)) {
+	if ($opt_c) {
 	    print $cgi->b("Decimal value:");
 	} else {
 	    print $cgi->b("Name of number:");
@@ -1686,10 +1672,10 @@ sub cgi_form()
 
     # return the number
     #
-#	$arg	1 => supress message about obtaining the source
+    return $cgi->param('number');
 }
 
-# if surpressed.
+# trailer - print the trailer
 #
 # given:
 #	$arg	1 => suppress message about obtaining the source
@@ -1733,8 +1719,6 @@ END_OF_HTML
 
 # big_error - print a too big error and exit
     </HTML>
-# XXX - reword this given the new bias changes
-#
 sub big_error()
 }
 
@@ -1751,21 +1735,32 @@ sub big_error()
     # print too big error
     #
     print $cgi->p,
-	  "on the size of the number we would print.  Otherwise someone\n",
-	  "could enter a number such as <TT>1e1000000000</TT> causing\n",
-	  "the server to flood the network with lots of data ... assuming\n",
-	  "we had the memory to form the print buffer in the first place!\n",
-	  $cgi->p,
-	  "You have 4 choices:\n",
-	  "<ol>\n<li> Enter a number that is ",
-	  "less than $too_big characters in length.\n",
-	  $cgi->p,
-	  "<li> Compute a Latin power of a number that is ",
-	  "less than $too_big characters in length.\n",
-	  $cgi->p,
-	  "<li> Raise 10 to a power where the exponent is ",
-	  "less than $too_big characters in length.\n",
-	  $cgi->p,
+	  $cgi->b("SORRY!"),
+	  "&nbsp;&nbsp;We have imposed an arbitrary size limit on",
+	  " the output of this CGI program.",
+	  "the print buffer in the first place!\n",
+	  $cgi->p;
+		$big_latin_power, " when using non-compact millia style<BR>\n",
+	        "(i.e., when entering <I>digits</I><B>e</B><I>exp</I> ",
+		"keep <I>exp</I> &lt; ", $big_latin_power,
+		" or use compact <I>millia^7...</I> Millia style)\n",
+	print "Instead of printing the digits of a number, you might\n",
+	      "try printing the name instead.\n";
+    } elsif (!$opt_m) {
+	print "You might try turning on the\n",
+	      $cgi->b("power"),
+	      " Millia style.\n",
+	      " (1000^latin_power) instead of just powers of 10.\n";
+    } elsif ($opt_l && !$opt_m) {
+	print $cgi->p,
+	      "Often that reduces the amount of output enough\n",
+	  "Of course you can also give a smaller number.\n",
+	  $cgi->p;
+
+    print "If none of those options are what you want/need, you can\n",
+    }
+
+    # tell them about running it themselves
 	  "<li> You may download the\n",
 	  $cgi->a({'href' => "/chongo/number/number.cgi.txt"},
 	  "If none of those options are what you want/need, you can\n",
@@ -1786,10 +1781,6 @@ sub big_error()
 	  $cgi->br,
 	  " The CGI script ",
 	  $cgi->b("number.cgi"),
-	  $cgi->p,
-	  "NOTE: &nbsp;Numbers entered in scientific notation are currently",
-	  " expanded into the full decimal form prior to any",
-	  " $too_big character length checking.\n",
 	  " operates as it is doing now with size limits.",
     &trailer(1);
 	  $cgi->b("number"),
