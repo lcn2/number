@@ -2,9 +2,9 @@
 #
 # number - number makefile
 #
-# @(#) $Revision$
-# @(#) $Id$
-# @(#) $Source$
+# @(#) $Revision: 1.15 $
+# @(#) $Id: Makefile,v 1.15 1999/10/11 10:17:39 chongo Exp chongo $
+# @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -34,11 +34,6 @@ TARGETS= number.cgi.txt number.cgi number
 
 all: ${TARGETS}
 
-number.cgi.txt: number.pl
-	rm -f number.cgi.txt
-	cp number.pl number.cgi.txt
-	chmod 0555 number.cgi.txt
-
 number.cgi: number.pl
 	rm -f number.cgi
 	cp number.pl number.cgi
@@ -61,8 +56,8 @@ number: number.pl
 #
 install: all
 	-@if [ -d ${WWW} ]; then \
-	    echo "	install -m 0644 number.cgi.txt ${WWW}"; \
-	    install -m 0644 number.cgi.txt ${WWW}; \
+	    echo "	install -m 0644 number ${WWW}"; \
+	    install -m 0644 number ${WWW}; \
 	    echo "	install -m 0755 number.cgi ${WWW}"; \
 	    install -m 0755 number.cgi ${WWW}; \
 	fi
