@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.10 $
+#  @(#} $Revision: 2.11 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,7 +85,7 @@ use Getopt::Long;
 use CGI;
 
 # version
-my $version = '$Revision: 2.10 $';
+my $version = '$Revision: 2.11 $';
 
 # GetOptions argument
 #
@@ -104,6 +104,7 @@ my $warn = $^W;
 my $big_input = 100000;		# too many input digits for the web
 my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
 my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
+my $big_name = 100000;		# too compents in a name
 
 # We have optimizations that allow us to treat a large power of 10 bias
 # (due to conversion of a very large scientific notation number) in
@@ -206,6 +207,10 @@ sub cgi_form();
 sub trailer($);
 sub big_error();
 sub error($);
+
+# signal processing
+#
+$SIG{PIPE} = sub { exit(2); };
 
 # main
 #
@@ -372,7 +377,7 @@ MAIN:
 		"optional - and 1 more more digits after the e.  All\n" .
 		"3 digit separators, leading 0's and whitespace characters\n" .
 		"are ignored.");
-    # We did not have a number is scientific notation so we have no bias
+	}
 	if ($num !~ /^\Q$point\E?\d/o) {
 	    err("Scientific numbers must at least a digit before the e.");
 	}
@@ -1381,6 +1386,8 @@ sub power_of_ten($$$)
 #			    notation conversion
 #
 sub print_name($$$$$)
+{
+    my ($neg, $integer, $fract, $system, $bias) = @_;	# get args
     my $bias_mod3;	# bias % 3
     my $millia;		# millia arg, power of 1000 for a given set f 3
     my $intstr;		# integer as a string
@@ -1444,6 +1451,20 @@ sub print_name($$$$$)
 	    $intstr .= "00";
 	}
     }
+
+    # determine the number of sets of 3
+    #
+    $intlen = length($intstr);
+    $cnt3 = int(($intlen+2)/3);
+    $millia = Math::BigInt->new($bias);
+
+	$fulllen = $bias->babs;
+	$fulllen += $fractlen;
+	$fulllen += $intlen;
+	if ($fulllen < -$big_name || $fulllen > $big_name) {
+	    big_error();
+	$fulllen = abs($fractlen) + abs($intlen);
+	if ($bias < 0) {
 	    $fulllen -= $bias;
 	}
 	if ($fulllen > $big_name) {
