@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.4 $
+#  @(#} $Revision: 2.7 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,7 +85,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.4 $';
+my $version = '$Revision: 2.7 $';
 
 # GetOptions argument
 #
@@ -1624,9 +1624,9 @@ sub cgi_form()
 	"dup" => " milliamillia...",
 	"power" => " millia^7 (compact form)"
     print $cgi->header,
-	  $cgi->start_html('title' => 'The Name of a Number',
+	  $cgi->start_html('title' => 'The English name of a number',
 			 'bgcolor' => '#98B8D8'),
-	  $cgi->h1('The Name of a number'),
+	  $cgi->h1('The English name of a number'),
 	  $cgi->p,
 	  "See the ",
 	  $cgi->a({'HREF' =>
