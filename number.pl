@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.8 $
+#  @(#} $Revision: 2.9 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,7 +85,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.8 $';
+my $version = '$Revision: 2.9 $';
 
 # GetOptions argument
 #
@@ -1657,35 +1657,35 @@ sub cgi_form()
 	  $cgi->p,
 	  $cgi->start_form,
 	  "Type of input:",
-	  "nbsp;" x 4,
+	  "&nbsp;" x 4,
 	  $cgi->radio_group('name' => 'input',
 			  'values' => ['number', 'exp', 'latin'],
 			  'labels' => \%input_label,
 			  'default' => 'number'),
 	  $cgi->br,
 	  "Type of output:",
-	  "nbsp;" x 2,
+	  "&nbsp;" x 2,
 	  $cgi->radio_group('name' => 'output',
 			  'values' => ['name', 'digit'],
 			  'labels' => \%output_label,
 			  'default' => 'name'),
 	  $cgi->br,
 	  "Name system:",
-	  "nbsp;" x 4,
+	  "&nbsp;" x 4,
 	  $cgi->radio_group('name' => 'system',
 			  'values' => ['usa', 'europe'],
 			  'labels' => \%system_label,
 			  'default' => 'usa'),
 	  $cgi->br,
 	  "Millia style:",
-	  "nbsp;" x 8,
+	  "&nbsp;" x 8,
 	  $cgi->radio_group('name' => 'millia',
 			  'values' => ['dup', 'power'],
 			  'labels' => \%millia_label,
 			  'default' => 'dup'),
 	  $cgi->br,
 	  "Dash style:",
-	  "nbsp;" x 10,
+	  "&nbsp;" x 10,
 	  $cgi->radio_group('name' => 'dash',
 			  'values' => ['nodash', 'dash'],
 			  'labels' => \%dash_label,
@@ -1813,7 +1813,7 @@ END_OF_HTML
     }
 
     print <<END_OF_HTML;
-    lt; was here gt;
+    <P>
     Brought to you by:
     </P> <BLOCKQUOTE>
     Landon Curt Noll
@@ -1836,7 +1836,7 @@ sub big_error()
     if ($preblock) {
 	print $cgi->p, "\n";
 	print "</PRE>\n</BLOCKQUOTE>\n";
-	  "nbsp;nbsp;We have imposed an arbitrary size limit on",
+    }
 
     # print too big error
     #
@@ -1852,10 +1852,10 @@ sub big_error()
 	  "network with lots of data ... assuming we had the memory to form\n",
 	  "the print buffer in the first place!\n";
 
-	  "<LI> Latin power scientific notation exponent lt; ",
+    # tell about some of the limits
     #
     print $cgi->p,
-		"keep <I>exp</I> lt; ", $big_latin_power,
+	  "The arbitrary size limit as approximately as follows:\n",
 	  "<UL>\n",
 	  "<LI> No more than $big_input characters of input\n",
 	  "<LI> Latin power scientific notation exponent &lt; ",
