@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.16 $
-# @(#) $Id: Makefile,v 1.16 1999/10/11 13:17:41 chongo Exp chongo $
+# @(#) $Revision: 1.17 $
+# @(#) $Id: Makefile,v 1.17 1999/10/11 13:22:23 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -27,9 +27,17 @@
 # PERFORMANCE OF THIS SOFTWARE.
 
 SHELL= /bin/sh
+INSTALL= install
+
+# locations
 DESTDIR= /usr/local/bin
-WWWROOT= /usr/local/ns-home/docs
-WWW= ${WWWROOT}/chongo/number
+SERVERROOT= /usr/local/ns-home
+WWWROOT= ${SERVERROOT}/docs
+WWW= ${WWWROOT}/chongo/tech/math/number
+CGIBIN= ${SERVERROOT}/cgi-bin
+EXTCGIBIN= ${WWWROOT}/chongo/cgi-bin
+
+# what to build
 TARGETS= number.cgi number
 
 all: ${TARGETS}
@@ -43,25 +51,20 @@ number: number.pl
 	cp number.pl number
 	chmod 0555 number
 
-# NOTE: The cgi-bin/Makefile forms a symlink between the file:
-#
-#	${DOC_ROOT}/cgi-bin/nummber.cgi
-#
-# and our installation file:
-#
-#	${WWW}/number.cgi
-#
-# So thus we do NOT need to install number.pl into the cgi-bin directory
-# if we do not have the ${WWW} directory.
-#
 install: all
+	${INSTALL} -m 0555 number ${DESTDIR}
 	-@if [ -d ${WWW} ]; then \
-	    echo "	install -m 0644 number ${WWW}"; \
-	    install -m 0644 number ${WWW}; \
-	    echo "	install -m 0755 number.cgi ${WWW}"; \
-	    install -m 0755 number.cgi ${WWW}; \
+	    echo "	${INSTALL} -m 0644 number ${WWW}"; \
+	    ${INSTALL} -m 0644 number ${WWW}; \
 	fi
-	install -m 0555 number ${DESTDIR}
+	-@if [ -d ${CGIBIN} ]; then \
+	    echo "	${INSTALL} -m 0555 number.cgi ${CGIBIN}"; \
+	    ${INSTALL} -m 0555 number.cgi ${CGIBIN}; \
+	fi
+	-@if [ -d ${EXTCGIBIN} ]; then \
+	    echo "	${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}"; \
+	    ${INSTALL} -m 0755 number.cgi ${EXTCGIBIN}; \
+	fi
 
 clean:
 
