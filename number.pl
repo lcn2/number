@@ -1,12 +1,12 @@
-#!/usr/bin/perl
 #!/usr/bin/perl -w
-#  @(#} $Revision: 1.9 $
+#!/usr/bin/perl
+#  @(#} $Revision: 1.10 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-d] [-m] [-c] [-l] [-e] [-h]
+#	number [-p] [-d] [-m] [-c] [-l] [-e] [-h] [number]
 #
 #	-p	input is a power of 10
 #	-d	add dashes to help with pronunciation
@@ -15,6 +15,8 @@
 #	-l	output number on a single line
 #	-e	use European instead of American name system
 #	-h	print a help message only
+#
+# If number is omitted, then it is read from standard input.
 #
 # Be sure to see:
 #
@@ -59,11 +61,11 @@
 #
 use strict;
 use Math::BigInt;
-use vars qw($opt_p $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
+use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.9 $';
+my $version = '$Revision: 1.10 $';
 
 # Warning state
 my $warn = $^W;
@@ -74,91 +76,12 @@ my $dash = "";
 
 # Latin root tables
 #
-my @unit = ( "" , 
-	  "", qw( duo tres
-	  quattuor quinque sex
-	  septem octo novem
-	  decem
-	  un-decem duo-decem tres-decem
-	  quattuor-decem quin-quedecem se-decem
-	  septen-decem duode-viginti unde-viginti
-	  viginti
-	  viginti-unus viginti-duo viginti-tres
-	  viginti-quattuor viginti-quinque viginti-sex
-	  viginti-septem duode-trigintati unde-trigintati
-	  trigintati
-	  trigintati-unus trigintati-duo trigintati-tres
-	  trigintati-quattuor trigintati-quinque trigintati-sex
-	  trigintati-septem duode-quadragintati unde-quadragintati
-	  quadragintati
-	  quadragintati-unus quadragintati-duo quadragintati-tres
-	  quadragintati-quattuor quadragintati-quinque quadragintati-sex
-	  quadragintati-septem duode-quinquagintati unde-quinquagintati
-	  quinquagintati
-	  quinquagintati-unus quinquagintati-duo quinquagintati-tres
-	  quinquagintati-quattuor quinquagintati-quinque quinquagintati-sex
-	  quinquagintati-septem duode-sexagintati unde-sexagintati
-	  sexagintati
-	  sexagintati-unus sexagintati-duo sexagintati-tres
-	  sexagintati-quattuor sexagintati-quinque sexagintati-sex
-	  sexagintati-septem duode-septuagintati unde-septuagintati
-	  septuagintati
-	  septuagintati-unus septuagintati-duo septuagintati-tres
-	  septuagintati-quattuor septuagintati-quinque septuagintati-sex
-	  septuagintati-septem duode-octogintati unde-octogintati
-	  octogintati
-	  octogintati-unus octogintati-duo octogintati-tres
-	  octogintati-quattuor octogintati-quinque octogintati-sex
-	  octogintati-septem duode-nonagintati unde-nonagintati
-	  nonagintati
-	  nonagintati-unus nonagintati-duo nonagintati-tres
-	  nonagintati-quattuor nonagintati-quinque nonagintati-sex
-	  nonagintati-septem duode-centi unde-centi
-	  centi ));
-my @last_100 = ("", qw(
-	  mi bi tri
-	  quadri quinti sexti
-	  septi octi noni
-	  deci
-	  un-deci duo-deci tres-deci
-	  quattuor-deci quin-quedeci se-deci
-	  septen-deci octo-deci novem-deci
-	  viginti
-	  viginti-mi viginti-bi viginti-tri
-	  viginti-quadri viginti-quinti viginti-sexti
-	  viginti-septi duode-trigintati unde-trigintati
-	  trigintati
-	  trigintati-mi trigintati-bi trigintati-tri
-	  trigintati-quadri trigintati-quinti trigintati-sexti
-	  trigintati-septi duode-quadragintati unde-quadragintati
-	  quadragintati
-	  quadragintati-mi quadragintati-bi quadragintati-tri
-	  quadragintati-quadri quadragintati-quinti quadragintati-sexti
-	  quadragintati-septi duode-quinquagintati unde-quinquagintati
-	  quinquagintati
-	  quinquagintati-mi quinquagintati-bi quinquagintati-tri
-	  quinquagintati-quadri quinquagintati-quinti quinquagintati-sexti
-	  quinquagintati-septi duode-sextiagintati unde-sexagintati
-	  sexagintati
-	  sexagintati-mi sexagintati-bi sexagintati-tri
-	  sexagintati-quadri sexagintati-quinti sexagintati-sexti
-	  sexagintati-septi duode-septuagintati unde-septuagintati
-	  septuagintati
-	  septuagintati-mi septuagintati-bi septuagintati-tri
-	  septuagintati-quadri septuagintati-quinti septuagintati-sexti
-	  septuagintati-septi duode-octogintati unde-octogintati
-	  octogintati
-	  octogintati-mi octogintati-bi octogintati-tri
-	  octogintati-quadri octogintati-quinti octogintati-sexti
-	  octogintati-septi duode-nonagintati unde-nonagintati
-	  nonagintati
-	  nonagintati-mi nonagintati-bi nonagintati-tri
-	  nonagintati-quadri nonagintati-quinti nonagintati-sexti
-	  nonagintati-septi duode-centi unde-centi
-	  centi ));
-my @hundred = ("", qw( centi ducenti trecenti quadringenti
-		      quingenti sescenti septingenti octingenti nongenti
-		      milia ));
+my @l_unit = ( "" , qw( un do tre quattuor quin sex septen octo novem ));
+my @l_ten = ("", qw( deci viginti triginti quadraginti quinquaginti
+		     sexaginti septuaginti octoginti nonaginti ));
+my @l_hundred = ("", qw( centi ducenti trecenti quadringenti quingenti
+		         sescenti septingenti octingenti nongenti ));
+my @l_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
 
 # English names - names from 0 thru 999
 #
@@ -175,12 +98,13 @@ my @twenty = qw(ten eleven twelve thirteen fourteen
 
 # usage and help
 #
-my $usage = "number [-p] [-d] [-m] [-c] [-l] [-e] [-h]";
+my $usage = "number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]";
 my $help = qq{Usage:
 
     $0 $usage
 
 	-p	input is a power of 10
+	-L	inout is a Latin power of 1000
 	-d	add dashes to help with pronunciation
 	-m	output name in a more compact exponentation form
 	-c	output number in comma/dot form
@@ -188,16 +112,18 @@ my $help = qq{Usage:
 	-e	use European instead of American name system
 	-h	print a help message only
 
-    Enter a number on standard input.  One may enter either
-    a decimal number or a number in scientific notation (e.g.,
-    2.5e100).  Negative and floating point numbers are allowed.
+    If number is not given on the command line it is read from standard
+    input.
 
     All whitespace (including newlines), commas and periods
     are ignored, with the exceptiion of a single (optinal)
     decimal point (or decimal comma if european name system),
-    which if found will be processed.  In other words, all
-    valid data found on standard input will be considered as if
-    it were a single number.
+    which if found will be processed.  In the case of reading from
+    standard input, all valid data found on standard input will be 
+    considered as if it were a single number.
+
+    A number may be either a in decimal or in scientific notation (e.g.,
+    2.5e100).  Negative and floating point numbers are allowed.
 
     Updates from time to time are made to this program.
     See http://reality.sgi.com/chongo/number for updates.
@@ -209,7 +135,8 @@ my $help = qq{Usage:
 
 # main
 #
-MAIN: {
+MAIN: 
+{
     # my vars
     #
     my $sep;		# set of 3 digits separator
@@ -228,7 +155,7 @@ MAIN: {
 
     # parse args
 	    print $cgi->p, "\n";
-    if (!getopts('pdmcleh')) {
+    if (!getopts('pLdmcleh')) {
 	die "usage: $0 $usage\n";
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
@@ -247,14 +174,6 @@ MAIN: {
     }
 
     # determine if dashes will appear in the name
-
-    } else {
-
-	# remove -'s from the Latin root tables since we do not want them
-	#
-	map s/-//, @unit unless $dash;
-	map s/-//, @last_100 unless $dash;
-	map s/-//, @hundred unless $dash;
     #
     if ($opt_d) {
 
@@ -269,10 +188,16 @@ MAIN: {
 	$system = "European";
 	$sep = ".";
 	$point = ",";
-    # snarf the number from the entire stdin
+    } else {
 	$system = "American";
-    $/ = undef;
-    $num = <>;
+	$sep = ",";
+	$point = ".";
+    } else {
+
+    # get the number
+    #
+    if (defined $ARGV[0]) {
+	$num = $ARGV[0];
     } elsif ($html == 0) {
     # Web firewall
     #
@@ -304,7 +229,7 @@ MAIN: {
 	die "$0: numbers may have only one decimal $point\n";
     }
 
-	exit(0);
+    # firewall
     #
     if ($num =~ /\Q$point\E.*\Q$point\E/o) {
 	err("Numbers may have only one decimal $point.");
@@ -338,12 +263,12 @@ MAIN: {
     # split into integer and fractional parts
 	}
 	print $cgi->p, "\n";
-    if ($opt_p) {
+    if ($opt_p || $opt_L) {
 	$preblock = 1;
     }
 
     # catch the case where we only want to enter a power of 10
-	    die "$0: The power of 10 must be a non-negative integer.<P>\n";
+	    die "$0: The power of 10 must be a non-negative integer.\n";
     if ($opt_p || $opt_l) {
 
        # only allow powers of 10 that are non-negative integers
@@ -630,101 +555,91 @@ sub print_number($$\$$\$$)
 #	$num	number to construct
 
 # latin_root - return the Latin root of a number
-# form a name for 1000^($num+1), depending on American or European 
+#
 # given:
 #	$num	   number to construct
 sub latin_root($)
 # form a name for 1000^($num+1), depending on American or European
     my $num = $_[0];	# number to construct
-    my @set_3;	# set of 3rd digits (hundreds places) in a set of 3
-    my @set_12;	# set of 1st & 2nd (tens & ones places) in a set of 3
-    my $dig3;	# 3rd digit in a set of 3
-    my $dig12;	# 2nd and 1st digits in a set of 3
+# The effect of $millia is to multiply $num by 1000^$millia.
+#
+sub latin_root($$)
+{
+    my ($num, $millia) = @_;	# get args
+    my $numstr;	# $num as a string
+    my @set3;	# set of 3 digits, $set3[0] is the most significant
+    my $d3;	# 3rd digit in a set of 3
     my $l2;	# latin name for 2nd digit in a set of 3
     my $l1;	# latin name for 1st digit in a set of 3
-    # split num into sets of hundreds places and tens & ones places
+    # If $bias is larger than $big_bias, then we cannot just treat
     # it like an integer.  In the case of the web, we bail.  In
-    # XXX - This code should be improved to use $num as a string
-    #	    instead of splitting it into an array.
+    if ($num < @l_special) {
+    #
+    $nonint_millia = 1 if ($millia > $big_bias);
+
+    # deal with small special cases for small values
+    #
     if ($millia == 0 && $num < @l_special) {
     $num =~ s/[^\d]//g;
-    for ($i = length($num); $i >= 3; $i -= 3) {
-	push @set_12, substr($num, -2, 2);
-	push @set_3, substr($num, -3, 1);
-	$num = substr($num, 0, $i-3);
+    $i = length($num);
     }
-    if ($i > 0) {
-	# deal with a possible partial upper set of 3 digits
-	push @set_12, $num;
-	push @set_3, "0";
+
+	@set3 = unpack("a3"x$len, $num);
+    #
+	@set3 = unpack("a"."a3"x($len-1), $num);
+    $i = length($numstr);
+    $len = int(($i + 2) / 3);
+	@set3 = unpack("a2"."a3"x($len-1), $num);
+	@set3 = unpack("a3"x$len, $numstr);
     } elsif ($i % 3 == 1) {
 	@set3 = unpack("a"."a3"x($len-1), $numstr);
     #
     # We have to be careful about how we compute $millia+len-1
     # so that it will not become a floating value.
-    while (@set_12 > 1) {
+    #
+    $millia_cnt = $millia + $len;
+	    # warnings internal to the BigInt code with the
+	    # decrement below.  We block these bogus warnings.
+	    #
+	    --$millia_cnt;
+	}
 
-	# set the set of 3 digits
+	# do nothing if 000
+	#
+	#
+	# The 100's place is a little bit tricky.  Normally the hundred names
+	# end in a ``t'', however when we are dealing with the last set of
+	# 3 and there is no tens or ones, then the ''t'' is thought to belong
+	# to the final ``tillion'' or ``tillard''.
+	$l3 = (($d3 > 0) ? $l_hundred[$d3] . $dash : "");
+
+	$l2 = (($d2 > 0) ? $l_ten[$d2] . $dash : "");
 	$d3 = substr($set3[$i], 0, 1);
-	$dig3 = pop @set_3;
-	$dig12 = pop @set_12;
+	# However just 001 in all but the lowest set of 3
+	# results in no output do that we wind up with
+
+	# print the 3 digits
+	#	milla-illion
+	# We will skip the printing of the 3 digits if
+	# we have just 001 in all but the lowest set of 3.
+	# This results in no output do that we wind up with
+	#	un-milla-illion
 	#
-	# form the 3 digit number
+	if ($i == $len-1 || $d1 != 1 || $d2 != 0 || $d3 != 0) {
 	#
-	if ($dig3 > 0) {
-	    if ($dig12 > 0) {
-		# append as in 123
-		print $hundred[$dig3] . $dash .
-			$unit[$dig12] . $dash;
-		if ($opt_m) {
-		    if (scalar(@set_3)-1 > 1) {
-			print "milia^", scalar(@set_3)-1, "$dash";
-		    } else {
-			print "milia$dash";
-		    }
-		} else {
-		    print "milia$dash" x (scalar(@set_3)-1);
-		}
-	    } else {
-		# append as in 100
-		print $hundred[$dig3] . $dash;
-		if ($opt_m) {
-		    if (scalar(@set_3)-1 > 1) {
-			print "milia^", scalar(@set_3)-1, "$dash";
-		    } else {
-			print "milia$dash";
-		    }
-		} else {
-		    print "milia$dash" x (scalar(@set_3)-1);
-		}
-	    }
-	} elsif ($dig12 > 0) {
-	    # append as in 023
-	    print $unit[$dig12] . ($dig12 > 1 ? $dash : "");
-	    if ($opt_m) {
-		if (scalar(@set_3) > 1) {
-		    print "milia^", scalar(@set_3), "$dash";
-		} else {
-		    print "milia$dash";
-		}
+	# instead of:
+	#
+	# add one the milia as needed
+	#
+	if ($i < $len-1) {
+	    if ($opt_m && $i < $len-2) {
+		print "milia^", $len-$i-1, "$dash";
 		if ($millia_cnt > 1) {
-		print "milia$dash" x scalar(@set_3);
+		print "milia$dash" x ($len-$i-1);
 		if ($nonint_millia) {
 		    while (($millia_cnt -= $big_bias) > $big_bias) {
     #	trecen-dec-tillion
     #
-    # deal with the last set of 3
-    #
-    if ($set_3[0] > 0) {
-	if ($set_12[0] > 0) {
-	    print $hundred[$set_3[0]] . $dash .  $last_100[$set_12[0]] . $dash;
-	} else {
-	    print $hundred[$set_3[0]] . $dash;
-	}
-    } elsif ($set_12[0] > 0) {
-	print $last_100[$set_12[0]] . $dash;
-    }
-
     if (defined($d2) && $d2 == 1) {
 	print "i";
     } else {
@@ -753,8 +668,7 @@ sub american_kilo($)
     if ($power == 0) {
 	err("Negative powers of 1000 not supported: $power");
     }
-    # We must deal with 1 as a special case because it
-    # does not map well into the Latin root process.
+
     # We treat 0 as nothing
     } elsif ($power == 1) {
     if ($power == 0) {
@@ -797,14 +711,11 @@ sub european_kilo($)
     if ($power == 0) {
 	err("Negative powers of 1000 not supported: $power");
     }
-    # We must deal with 1 as a special case because it
-    # does not map well into the Latin root process.
+
     # We treat 0 as nothing
     } elsif ($power == 1) {
     if ($power == 0) {
 	return;
-    # Otherwise we use the Latin root process to construct the value.
-    #
     # Even roots use "llion"
     } elsif ($power == 1) {
     } elsif ($power % 2 == 0) {
@@ -826,10 +737,6 @@ sub european_kilo($)
 }
 
 # power_of_ten - just print name of a the power of 10
-# BUG: The problem is that this function must perform arithmetic on the
-#      $num argument.  If $power is too large for an integer, we will
-#      fail.  We need to use the BigInt perl module to avoid overflows.
-#
 sub power_of_ten(\$$)
 # given:
     my ($power, $system) = @_;		# get args
@@ -849,19 +756,37 @@ sub power_of_ten($$$)
 
     # convert the power of 10 into a multipler and a power of 1000
 
-    $^W = 0;
-    $kilo_power = $big / 3;
-    # convert the power of 10 into a multiplier and a power of 1000
-    # print the multipler name
+    # If we gave -L, then we will assume that we are dealing with
     #
-    $mod3 = ($big % 3);
-    $^W = $warn;
-    if ($mod3->bcmp($one) < 0) {
+    $big = Math::BigInt->new($$power);
+    if ($opt_L) {
+    # convert the power of 10 into a multiplier and a power of 1000
+	# under -L, we deal with powers of 1000 above 1000
+	    $big *= 10;
+	$kilo_power = $big + 1;
+	    $big *= 100;
+	# under -L, our miltiplier name is always one
+
 	# under -l, we deal with powers of 1000 above 1000
-    } elsif ($mod3->bcmp($one) == 0) {
-	print "ten";
+	#
 	$kilo_power = $big;
-	print "one hundred";
+
+		       "10\n" .
+		       "of 10 at this time.  Try using Latin powers or enter" .
+	# convert power of 10 into power of 1000
+	$kilo_power = $big / 3;
+	# bdiv below.  We block these bogus warnings.
+	# print the multipler name
+	$^W = 0;
+	$mod3 = ($big % 3);
+	$^W = $warn;
+	if ($mod3->bcmp($one) < 0) {
+	$^W = $warn;
+	} elsif ($mod3->bcmp($one) == 0) {
+
+	# print the multiplier name
+	#
+	if ($mod3 < 1) {
 	    print "one";
 	} elsif ($mod3 == 1) {
     # To avoid passing the BigInt issue onto &american_kilo() and
@@ -869,31 +794,33 @@ sub power_of_ten($$$)
     # and bypass them.  Unfortunatly we must duplicate code again
     # as a result.
 
-    # We treat 0 as nothing
+	    print "ten";
+	} else {
 	    print "one hundred";
     if ($kilo_power->bcmp($one) < 0) {
-	print "\n";
-	return;
-
-    # We must deal with 1 as a special case because it
-    # does not map well into the Latin root process.
-    #
-    } elsif ($kilo_power->bcmp($one) == 0) {
-	print " thousand\n";
-	return;
     }
 
-    # print the kilo name based on the system
+    # A zero kilo_power means that we only have 1, 10 or 100
+    # and so there is nothing else to print.
+    #
+    } elsif ($kilo_power->bcmp($one) == 0) {
+	# nothing else to print
+
+    # We must treat a kilo_power of 1 as a special case
     # because 'thousand' does not have a Latin root base.
-    if ($system eq 'American') {
-	--$kilo_power;
+    #
+    } elsif ($kilo_power == 1 && $biasmillia == 0) {
 	print " thousand";
-	&latin_root($kilo_power);
+	&latin_root($kilo_power-1);
     # print the name based on the American name system
+    #
+    } elsif ($system eq 'American') {
+
 	print " ";
+	latin_root($kilo_power-1, $biasmillia);
 	# is even or odd.
-	$kilo_power /= 2;
 	$mod2 = $kilo_power % 2;
+	$kilo_power /= 2;
 	    #
 	if ($mod2->bcmp($one) < 0) {
 	}
@@ -1070,12 +997,12 @@ sub print_3($)
 	} elsif ($num > 0) {
 	    if ($number > 99) {
 		$name_3 .= " ";
-	@english_3[$number] = $name_3;
+	    }
 	    $name_3 .= $digit[$num];
 	}
 
 	# save the 3 digit name
-    print @english_3[$number];
+	#
 	print $cgi->hr, "\n";
 	print $cgi->p, "\n";
     }
