@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.20 $
-# @(#) $Id: Makefile,v 1.20 1999/10/22 11:26:20 chongo Exp chongo $
+# @(#) $Revision: 1.21 $
+# @(#) $Id: Makefile,v 1.21 2000/09/22 04:05:34 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -44,6 +44,7 @@ all: ${TARGETS}
 number.cgi: number.pl
 	rm -f number.cgi
 	cp number.pl number.cgi
+	chmod 0555 number.cgi
 
 number: number.pl
 	rm -f number
