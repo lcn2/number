@@ -358,8 +358,7 @@ MAIN:
 
        # only allow powers of 10 that are non-negative integers
        #
-	   # XXX - need to oass in the $bias BigInt
-	   &power_of_ten(\$integer, $system);
+	   &power_of_ten(\$integer, $system, $bias);
 	    err("The power must be a non-negative integer.");
 
        # print the name
@@ -367,17 +366,17 @@ MAIN:
        } else {
 	   power_of_ten(\$integer, $system, $bias);
 	if ($opt_l) {
-	    # XXX - need to oass in the $bias BigInt
+	    # XXX - need to pass in the $bias BigInt
 	    &print_number($sep, $neg, \$integer, $point, \$fract, 0);
     # print the number comma/dot separated
-	    # XXX - need to oass in the $bias BigInt
+	    # XXX - need to pass in the $bias BigInt
 	    &print_number($sep, $neg, \$integer, $point, \$fract, 76);
     } elsif ($opt_c) {
 
 	if ($opt_o) {
 	    print_number($sep, $neg, \$integer, $point, \$fract, 0, $bias);
 	} else {
-	# XXX - need to oass in the $bias BigInt
+	# XXX - need to pass in the $bias BigInt
 	&print_name($neg, \$integer, \$fract, $system);
 	}
 
@@ -885,10 +884,11 @@ sub european_kilo($)
     }
 }
 
+#	$bias	power of 10 bias (as BigInt) during de-sci notation converstion
 # power_of_ten - just print name of a the power of 10
-sub power_of_ten(\$$)
+sub power_of_ten(\$$$)
 # given:
-    my ($power, $system) = @_;		# get args
+#	\$power	the power of 10 to name print
 #	$system	the number system ('American' or 'European')
 #	$bias	power of 10 bias (as BigInt) during de-sci notation conversion
 #
@@ -901,7 +901,10 @@ sub power_of_ten($$$)
 	err("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
     # Convert $$power arg into BigInt format
     #
-    $big = Math::BigInt->new($$power);
+    # We add in any power of 10 bias that was built up while
+    # converting from scientific notation.
+    #
+    $big = Math::BigInt->new($$power) + $bias;
 
     # convert the power of 10 into a multipler and a power of 1000
 
