@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.15 $
+#  @(#} $Revision: 2.16 $
 #
 # number - print the English name of a number of any size
 #
@@ -85,7 +85,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.15 $';
+my $version = '$Revision: 2.16 $';
 
 # CGI / HTML variables
 #
@@ -111,11 +111,11 @@ my $warn = $^W;
 # very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
-my $big_input = 100000;		# too many input digits for the web
-my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
-my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
-my $big_name = 100000;		# too compents in a name
-my $big_timeout = 7;		# max time to do anything
+my $big_input = 10000;		# too many input digits for the web
+my $big_latin_power = 100000;	# 1000^big_latin_power is limit for the web
+my $big_decimal = 1000000;	# don't expand >$big_decimal digits on the web
+my $big_digits = $big_input;	# too many digits to produce a name for the web
+my $big_timeout = 10;		# max time to do anything
 $SIG{ALRM} = sub { err("timeout"); };
 
 # For DOS (Denial Of Service) protection prevent file uploads and
@@ -1506,7 +1506,7 @@ sub print_name($$$$$)
 	if ($bias < 0) {
 	    $fulllen -= $bias;
 	}
-	if ($fulllen > $big_name) {
+	if ($fulllen > $big_digits) {
 	    big_err();
 	}
     }
