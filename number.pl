@@ -1,6 +1,6 @@
 #!/usr/bin/perl -T
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.3 $
+#  @(#} $Revision: 2.4 $
 #
 # number - print the English name of a number of any size
 #
@@ -26,11 +26,11 @@
 #
 # Be sure to see:
 #
-#	http://reality.sgi.com/chongo/tech/math/number/number.html
+#	http://www.isthe.com/chongo/tech/math/number/number.html
 #
 # For an example of names of large numbers, see:
 #
-#	http://reality.sgi.com/chongo/prime/merdigit/index.html
+#	http://www.isthe.com/chongo/tech/math/prime/mersenne.html
 #
 # for examples/help as well as the latest version of this code.
 #
@@ -71,8 +71,8 @@
 #
 #			Landon Curt Noll
 #
-#			{chongo,noll}@{toad,sgi}.com
-#			http://reality.sgi.com/chongo
+#			number-mail@asthe.com
+#			http://www.isthe.com/chongo
 #
 # chongo was here	/\../\
 #
@@ -86,7 +86,7 @@ use Getopt::Long;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 2.3 $';
+my $version = '$Revision: 2.4 $';
 
 # GetOptions argument
 #
@@ -185,12 +185,12 @@ my $help = qq{Usage:
 	./number -- -123
 
     Updates from time to time are made to this program.
-    See http://reality.sgi.com/chongo/tech/math/number/number.html
+    See http://www.isthe.com/chongo/tech/math/number/number.html
     for updates.
 
     You are using $version.
 
-    chongo <{chongo,noll}\@{toad,sgi}.com> was here /\\../\\
+    chongo <number-mail@asthe.com> was here /\\../\\
 };
 
 # main
@@ -1787,7 +1787,7 @@ sub cgi_form()
 	<P>
 	<HR>
 END_OF_HTML
-    <A HREF="http://reality.sgi.com/chongo/index.html">chongo</A>
+    print <<END_OF_HTML;
     &lt; was here &gt;
     Brought to you by:
     </P> <BLOCKQUOTE>
