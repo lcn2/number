@@ -1,14 +1,15 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.14 $
+#  @(#} $Revision: 1.15 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
 #
 # usage:
-#	number [-p] [-d] [-m] [-c] [-l] [-e] [-h] [number]
+#	number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]
 #
 #	-p	input is a power of 10
+#	-L	input is a Latin power of 1000
 #	-d	add dashes to help with pronunciation
 #	-m	output name in a more compact exponentation form
 #	-c	output number in comma/dot form
@@ -72,7 +73,7 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.14 $';
+my $version = '$Revision: 1.15 $';
 
 # Warning state
 my $warn = $^W;
@@ -156,7 +157,7 @@ MAIN:
     my $fract;		# fractional part
     my $system;		# American or European (but not a Swallow :-))
     my $visit;		# visit counter or error message
-    my $num;		# the number with ,'s removed
+    my $num;		# input value
     my $neg;		# 1 => number if < 0
     my $q;		# CGI object, if invoked as a CGI script
 
@@ -179,9 +180,9 @@ MAIN:
 	    print "Content-type: text/plain\n\n";
 	    print "Your browser sent bad or too much data!\n";
 	    print "Error: ", cgi_error(), "\n";
-	&cgi_form($q);
+	$num = &cgi_form($q);
 	}
-    # non-XGI parsed args
+	if (! defined $num) {
 	    print $cgi->p, "\n";
     } elsif (!getopts('pLdmcleh')) {
 	die "usage: $0 $usage\n";
@@ -220,7 +221,7 @@ MAIN:
 	$system = "American";
 	$sep = ",";
 	$point = ".";
-    } else {
+    }
 
     # get the number
     #
@@ -319,6 +320,10 @@ MAIN:
 	} else {
 	&print_name($neg, \$integer, \$fract, $system);
 	}
+
+    # otherwise print the first part of the response if allowed
+    #
+    &trailer(0);
 
     # If we are doing CGI/HTML stuff, print the trailer
     #
@@ -1062,9 +1067,12 @@ sub print_3($)
 # usage:
 #	\$q	CGI object
 #
-sub cgi_form(\$)
+# returns:
+#	$num	input value
+
+sub cgi_form(\$\$)
 # cgi_form - print the CGI/HTML form
-    my ($q) = @_;		# CGI object
+    my ($q, $num) = @_;		# CGI object
 
 #
 # returns:
@@ -1095,23 +1103,12 @@ sub cgi_form()
 			 'bgcolor' => '#80a0c0'),
 	  $q->h1('The Name of a number'),
 	  $q->p,
-	  "<UL>\n",
-	  "<LI> The number may be <I>almost</I> of any length.\n",
-	  "<LI> The number given may be negative or positive.\n",
-	  "<LI> Both whole &amp; floats are allowed (e.g.: ",
-	  "<TT>21701</TT> and <TT>2.71828</TT>).\n",
-	  "<LI> Whitespace, digit group separators and newlines are ignored.\n",
-	  "<LI> Scientific notation is allowed (e.g.: ",
-	  "<TT>1e303</TT>, <TT>-3.1415e70</TT>).\n",
-	  "</UL>\n",
+	  "See the ",
+	  $q->a({'HREF' => "/chongo/number/example.html"},
+		  "example / help"),
+	  " page for an explination of the options below.\n",
 	  $q->p,
 	  $q->start_form,
-	  $q->b('<FONT SIZE="+1">Enter a number:</FONT>'),
-	  $q->br,
-	  $q->textarea('name' => 'number',
-		       'rows' => '10',
-		       'columns' => '60'),
-	  $q->p,
 	  "Type of input:",
 	  "&nbsp;" x 4,
 	  $q->radio_group('name' => 'input',
@@ -1142,10 +1139,16 @@ sub cgi_form()
 	  $q->br,
 	  "Dash styie:",
 	  "&nbsp;" x 10,
-	  $q->radio_group('name' => 'hash',
+	  $q->radio_group('name' => 'dash',
 			  'values' => ['nodash', 'dash'],
 			  'labels' => \%dash_label,
 			  'default' => 'nodash'),
+	  $q->p,
+	  $q->b('<FONT SIZE="+1">Enter a number:</FONT>'),
+	  $q->br,
+	  $q->textarea('name' => 'number',
+		       'rows' => '10',
+		       'columns' => '60'),
 	  $q->p,
 	  $q->submit(name=>'Name that number'),
 	  " &nbsp;&nbsp;\n",
@@ -1153,53 +1156,123 @@ sub cgi_form()
 	  $q->end_form,
 	  $q->hr;
     print $cgi->textarea(-name => 'number',
-    # XXX
-    &trailer(0);
-    exit(0);
+		         -rows => '10',
+		         -columns => '60'), "\n";
+    print $cgi->p, "\n";
+    print $cgi->submit(name=>'Name that number'), "\n";
+    print $cgi->end_form, "\n";
+
+    if ($q->param()) {
+
+	# determine the input mode
+	#
+	if (defined($q->param('input'))) {
+	    if ($q->param('input') eq "exp") {
+		$opt_p = 1;	# assume -p (power of 10)
+	    } elsif ($q->param('input') eq "latin") {
+		$opt_L = 1;	# assume -L (1000 ^ (number+1))
+	    }
+    #
+	if ($cgi->param('input') eq "exp") {
+	# determine the output mode
+	#
+	if (defined($q->param('output')) && $q->param('output') eq "digit") {
+	    $opt_c = 1;		# assume -c (comma/dot decimal)
+	}
+    # determine the output mode
+	# determine the system
+	#
+	if (defined($q->param('system')) && $q->param('system') eq "europe") {
+	    $opt_e = 1;		# assume -e (European system)
+	}
+    # determine the system
+	# determine the millia style
+	#
+	if (defined($q->param('millia')) && $q->param('millia') eq "power") {
+	    $opt_m = 1;		# assume -m (compact millia method)
+	}
+
+	# determine the dash method in names
+	#
+	if (defined($q->param('dash')) && $q->param('dash') eq "dash") {
+	    $opt_d = 1;		# assume -d (use -'s in names)
+	}
+
+	# get ready to print the value
+	#
+	print $q->p;
+	if (defined($opt_c)) {
+	    print "\nDecimal value:\n";
+	} else {
+	    print "\nName of number:\n";
+	}
+	print $q->p,
+	      "\n<BLOCKQUOTE>\n",
+	      $q->b;
+    # determine the millia style
+    # We have just the initial display.  There is no input value.
+    # Just print the trailer and exit, do not return.
+    if (defined($cgi->param('millia')) &&
+    } else {
+	print $q->p,
+	      "\n<BLOCKQUOTE>\n",
+	      $q->b,
+	      "\n<PRE>\n";
+	&trailer(0);
+	exit(0);
+    }
+
+    # determine the dash method in names
+    #
+    return $q->param('number');
 	$opt_d = 1;		# assume -d (use -'s in names)
     }
 
     # return the number
 # usage:
-#	trailer(0)
+#	&trailer()
 }
 
 # if surpressed.
 #
-sub trailer()
+# given:
 #	$arg	1 => suppress message about obtaining the source
 #
 # If the arg passed is 1, then the message about obtaining the source
+# if suppressed.
+#
+    print "\n</PRE>\n</B>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
+
+    # section off with a line
+    #
     if ($html == 1) {
-    print <<END_OF_HTML;
-    <p>
-    The <a href="/chongo/number/number.cgi.txt">source</a> for this CGI
-    script is available.
-    Save it as either <B>number.cgi</B> and/or <B>number</B>.
-    <p>
-    If you run this program as <B>number</B> *without the <B>.cgi</B> 
-    extension), 
-    then it runs as normal program without all of the CGI/HTML stuff.
-    In normal program mode, the program does not enforce an arbitrary 
-    size limit.
-    Try <b>./number -h</b> for more information.
-    <p>
-    <hr>
+	print "<HR>\n<P>\n";
+	The <A HREF="/chongo/number/number.cgi.txt">source</A> for this CGI
+	script is available.
+	Save it as either <B>number.cgi</B> and/or <B>number</B>.
+	<p>
+	If you run this program as <B>number</B> (i.e., without the <B>.cgi</B> 
+	extension), 
+	then it runs as normal program without all of the CGI/HTML stuff.
+	In normal program mode, the program does not enforce an arbitrary 
+	size limit.
+	Try <B>./number -h</B> for more information.
+        <B>number.cgi</B> or <B>number</B>.
+        The CGI script <B>number.cgi</B> operates as it is doing now.<BR>
 	The Perl script <B>number</B> reads a number from standard input,
 	has no size limits<BR>
 	and does not perform any CGI/HTML actions.
 	Try <B>./number -h</B> for more info.
-    <p>
+	<P>
 	<HR>
-    </p>
-    <blockquote>
-    <a href="http://reality.sgi.com/chongo/index.html">chongo</a>
+    </P> <blockquote>
+    <A HREF="http://reality.sgi.com/chongo/index.html">chongo</A>
     &lt; was here &gt;
-    <strong>/\\oo/\\</strong>
-    </blockquote>
+    Brought to you by:
+    </P> <BLOCKQUOTE>
     Landon Curt Noll
-    </body>
-    </html>
+    <BR>
+    <A HREF="http://www.isthe.com/chongo/index.html">chongo</A>
     &lt; was here &gt;
 	print $cgi->hr, "\n";
 	print $cgi->p, "\n";
