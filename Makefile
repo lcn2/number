@@ -1,11 +1,10 @@
 #!/bin/make
-#  @(#} $Revision: 1.10 $
+#  @(#} $Revision: 1.11 $
 #  @(#} RCS control in //prime.corp/usr/local/src/cmd/number/Makefile
 #
 # number - number makefile
 
 SHELL=/bin/sh
-MODE=0555
 DESTDIR=/usr/local/bin
 WWW=/usr/local/ns-home/docs/chongo/number
 SCRIPTS= number.cgi.txt number.cgi
@@ -33,9 +32,9 @@ number.cgi: number.pl
 # So thus we do NOT need to install number.pl into the cgi-bin directory.
 #
 install: all
-	install -u chongo -m 0644 number.cgi.txt ${WWW}
-	install -u chongo -m 0755 number.cgi ${WWW}
-	install -m ${MODE} ${SCRIPTS} ${DESTDIR}
+	install -m 0644 number.cgi.txt ${WWW}
+	install -m 0755 number.cgi ${WWW}
+	install -m 0555 ${SCRIPTS} ${DESTDIR}
 
 clean:
 
