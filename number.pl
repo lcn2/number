@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.14 $
+#  @(#} $Revision: 2.15 $
 #
 # number - print the English name of a number of any size
 #
@@ -34,7 +34,7 @@
 #
 # for examples/help as well as the latest version of this code.
 #
-# Copyright (c) 2001 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2002 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -83,10 +83,19 @@ use strict;
 use Math::BigInt;
 use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
-use CGI;
 
 # version
-my $version = '$Revision: 2.14 $';
+my $version = '$Revision: 2.15 $';
+
+# CGI / HTML variables
+#
+my $html = 0;		# 1 ==> be are being invoked as a CGI script
+my $cgi = 0;		# CGI object, if invoked as a CGI script
+my $preblock = 0;	# 1 ==> we have output <BLOCKQUOTE><PRE>
+if ($0 =~ /\.cgi$/) {
+    $html = 1;
+    use CGI qw(:standard :cgi-lib use_named_parameters -debug);
+}
 
 # GetOptions argument
 #
@@ -107,7 +116,13 @@ my $big_latin_power = 1000000;	# 1000^big_latin_power is limit on web
 my $big_decimal = 10000000;	# don't expand > $big_decimal digits on web
 my $big_name = 100000;		# too compents in a name
 my $big_timeout = 7;		# max time to do anything
-$SIG{ALRM} = sub { error("timeout"); };
+$SIG{ALRM} = sub { err("timeout"); };
+
+# For DOS (Denial Of Service) protection prevent file uploads and
+# really big "POSTS"
+#
+$CGI::POST_MAX = $big_input + 1024;	# max 100K posts
+$CGI::DISABLE_UPLOADS = 1;		# no uploads
 
 # We have optimizations that allow us to treat a large power of 10 bias
 # (due to conversion of a very large scientific notation number) in
@@ -147,11 +162,6 @@ my @ten = qw(zero ten twenty thirty forty
 	     fifty sixty seventy eighty ninety);
 my @twenty = qw(ten eleven twelve thirteen fourteen
 		fifteen sixteen seventeen eighteen nineteen);
-
-# CGI / HTML variables
-#
-my $html = 0;		# 1 => be are being invoked as a CGI script
-my $cgi = 0;		# CGI object, if invoked as a CGI script
 
 # usage and help
 #
@@ -208,8 +218,8 @@ sub print_name($$$$$);
 sub print_3($);
 sub cgi_form();
 sub trailer($);
-sub big_error();
-sub error($);
+sub big_err();
+sub err($);
 
 # signal processing
 #
@@ -249,10 +259,7 @@ MAIN:
 
     # determine if we are CGI based
     #
-    if ($0 =~ /\.cgi$/) {
-
-	# we are a CGI script, web restictions apply
-	$html = 1;
+    if ($html) {
 
 	# CGI setup
 	#
@@ -264,13 +271,21 @@ MAIN:
 	    print "Error: ", cgi_error(), "\n";
 	    exit(1);
 	}
+	$cgi->use_named_parameters(1);
+
+	# print CGI form
+	#
+	$num = cgi_form();
+
+	# If no number (as displayed the blank form), just exit
+	#
 	if (! defined $num) {
 	    print $cgi->p, "\n";
 	    trailer(0);
 	    exit(0);
 	}
 
-	error("usage: $0 $usage");
+    # non-CGI parsed args
     #
     # NOTE: The -0 thru -9 are hacks to deal with negative numbers
     #	    on the command line.
@@ -285,9 +300,9 @@ MAIN:
     if ($opt_h) {
 	print $help;
 	exit(0);
-	    error("-c conflicts with either -l and/or -p");
+    }
 
-	    error("You may only print decimal digits when the <I>Type of " .
+    # -c conflicts with -l and -p
     #
     if ($opt_c && ($opt_l || $opt_p)) {
 	if ($html == 0) {
@@ -327,7 +342,7 @@ MAIN:
 	# snarf the number from the entire stdin
 	#
 	$/ = undef;
-	big_error();
+	$num = <>;
     }
 
     # Web firewall
@@ -357,7 +372,7 @@ MAIN:
 	} else {
 	    # strip off leading 0's
 	    $num =~ s/^0+//;
-	error("Numbers may have only one decimal $point.");
+	}
     }
 
     # firewall
@@ -368,7 +383,7 @@ MAIN:
     if ($num =~ /^$/) {
 	$num = "0";
     }
-	    error(
+
     # If scientific (e or E notation), verify format
     # and convert it into a long decimal value.
     #
@@ -377,7 +392,7 @@ MAIN:
 	    err(
 	        "Scientific numbers may only have a leading -, digits\n" .
 		"an optional decimal $point (optionally followed by digits)\n" .
-	    error("Scientific numbers must at least a digit before the e.");
+		"before e (or E).  The e (or E) may only be followed by an\n" .
 		"optional - and 1 more more digits after the e.  All\n" .
 		"3 digit separators, leading 0's and whitespace characters\n" .
 		"are ignored.");
@@ -390,7 +405,7 @@ MAIN:
     # We did not have a number in scientific notation so we have no bias
     #
     } else {
-	error("A number may only have a leading -, digits and an " .
+	$bias = Math::BigInt->new("0");
     }
 
     # verify that we have a valid number
@@ -411,10 +426,26 @@ MAIN:
 
     # verify that the number and the bias match
     #
-	error("FATAL: Internal error, bias: $bias > 0 and fract: $fract != 0");
+    # We have a non-zero bias when we convert from scientific notation and
     # there is not enough digits right or left of the decimal point/comma.
     # A $bias > 0 can only happen when we have a 0 $fract part.
-	error("FATAL: Internal error, bias: $bias < 0 and int: $integer != 0");
+    # A $bias < 0 can only happen when we have a 0 $integer part.
+    #
+    if ($bias > 0 && defined($fract) && $fract != 0) {
+	err("FATAL: Internal error, bias: $bias > 0 and fract: $fract != 0");
+    }
+    if ($bias < 0 && defined($integer) && $integer != 0) {
+	err("FATAL: Internal error, bias: $bias < 0 and int: $integer != 0");
+    }
+
+    # setup to output
+    #
+    if ($html) {
+	print $cgi->p, "\n";
+	print $cgi->hr, "\n";
+	print $cgi->p, "\n";
+	if ($opt_c) {
+	    print $cgi->b("Decimal value:"), "\n";
 	} else {
 	    print $cgi->b("Name of number:"), "\n";
 	}
@@ -424,7 +455,7 @@ MAIN:
     }
 
     # catch the case where we only want to enter a power of 10
-	    error("The power must be a non-negative integer.");
+    #
     if ($opt_p || $opt_l) {
 
        # only allow powers of 10 that are non-negative integers
@@ -641,7 +672,7 @@ sub print_number($$$$$$$)
     }
     if (defined($$fract)) {
 	$fractlen = length($$fract);
-	    big_error();
+    }
     if ($html) {
 	$fulllen = $bias->babs;
 	$fulllen += $fractlen;
@@ -948,7 +979,7 @@ sub latin_root($$)
     my $len;	# number of sets of 3 including the final (perhaps partial) 3
     my $millia_cnt;		# number of millia's to print
     my $millia_cnt_str;		# $millia_cnt as a string
-	error("FATAL: Internal error, millia: $millia < 0 in latin_root()");
+    my $nonint_millia = 0;	# 1 => $millia is very large, process with care
     my $i;
 
     # firewall
@@ -1099,7 +1130,7 @@ sub latin_root($$)
 #
 sub american_kilo($)
 {
-	error("Negative powers of 1000 not supported: $power");
+    my $power = $_[0];	# get arg
     my $big;		# $power as a BigInt
 
     # firewall
@@ -1145,7 +1176,7 @@ sub american_kilo($)
 sub european_kilo($)
 {
     my $power = $_[0];		# get arg
-	error("Negative powers of 1000 not supported: $power");
+    my $mod2;			# $power mod 2
     my $big;			# $power as a BigInt
 
     # firewall
@@ -1213,7 +1244,7 @@ sub power_of_ten($$$)
     my $mod2;				# $kilo_power mod 2
     my $biasmod3;			# bias mod 3
     my $biasmillia;			# int(bias/3)
-	error("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
+    my $bias_big;			# approx power of 10 ($bias+$big)
     my $i;
 
     # firewall
@@ -1230,7 +1261,7 @@ sub power_of_ten($$$)
     #
     # If we gave -l, then we will assume that we are dealing with
     # a power of 1000 instead of a power of 10.
-	    big_error();
+    #
     if ($opt_l) {
 
 	# Web firewall
@@ -1262,11 +1293,11 @@ sub power_of_ten($$$)
 	#
 	print "one";
 
-		error("Scientific notation is not supported for powers\n" .
+    } else {
 
 	# firewall
 	#
-		error("Scientific notation is not supported for powers of" .
+	if ($bias != 0) {
 	    if ($html) {
 		err("Scientific notation is not supported for powers\n" .
 		  "of 10 at this time. Try using <B>Latin powers</B> or enter" .
@@ -1470,7 +1501,7 @@ sub print_name($$$$$)
     if (defined($$fract)) {
 	$fractlen = length($$fract);
     }
-	    big_error();
+    if ($html) {
 	$fulllen = abs($fractlen) + abs($intlen);
 	if ($bias < 0) {
 	    $fulllen -= $bias;
@@ -1616,7 +1647,7 @@ sub print_3($)
     my $num;		# working value of number
     my $name_3;		# 3 digit name
 
-	error("print_3 called with arg not in [0,999] range: $number")
+    # pre-compute name of 3 digits if we do not alread have it
     #
     if (! defined($english_3[$number])) {
 
@@ -1697,67 +1728,68 @@ sub cgi_form()
     my %millia_label = (
 	"dup" => " milliamillia...",
 	"power" => " millia^7 (compact form)"
-    print $cgi->header,
-	  $cgi->start_html('title' => 'The English name of a number',
-			 'bgcolor' => '#98B8D8'),
-	  $cgi->h1('The English name of a number'),
-	  $cgi->p,
-	  "See the ",
-	  $cgi->a({'HREF' =>
+    );
+    my %dash_label = (
+	"nodash" => " without any -'s",
+	"dash" => " with -'s between parts of words"
+    );
+
+    print $cgi->header, "\n";
+    print $cgi->start_html(
 	  -title => 'The English name of a number',
-		  "example / help"),
-	  " page for an explanation of the options below.\n",
-	  $cgi->br,
-	  "See also the ",
-	  $cgi->a({'HREF' =>
+	  -bgcolor => '#98B8D8'), "\n";
+    print $cgi->h1('The English name of a number'), "\n";
+    print $cgi->p, "\n";
+    print "See the ", "\n";
+    print $cgi->a({'HREF' =>
 	  	  "http://www.isthe.com/chongo/tech/math/number/example.html"},
-		  "English name of a number home page"),
-	  ".",
-	  $cgi->p,
-	  $cgi->start_form,
-	  "Type of input:",
-	  "&nbsp;" x 4,
-	  $cgi->radio_group('name' => 'input',
-			  'values' => ['number', 'exp', 'latin'],
-			  'labels' => \%input_label,
-			  'default' => 'number'),
-	  $cgi->br,
-	  "Type of output:",
-	  "&nbsp;" x 2,
-	  $cgi->radio_group('name' => 'output',
-			  'values' => ['name', 'digit'],
-			  'labels' => \%output_label,
-			  'default' => 'name'),
-	  $cgi->br,
-	  "Name system:",
-	  "&nbsp;" x 4,
-	  $cgi->radio_group('name' => 'system',
-			  'values' => ['usa', 'europe'],
-			  'labels' => \%system_label,
-			  'default' => 'usa'),
-	  $cgi->br,
-	  "Millia style:",
-	  "&nbsp;" x 8,
-	  $cgi->radio_group('name' => 'millia',
-			  'values' => ['dup', 'power'],
-			  'labels' => \%millia_label,
-			  'default' => 'dup'),
-	  $cgi->br,
-	  "Dash style:",
-	  "&nbsp;" x 10,
-	  $cgi->radio_group('name' => 'dash',
-			  'values' => ['nodash', 'dash'],
-			  'labels' => \%dash_label,
-			  'default' => 'nodash'),
-	  $cgi->p,
-	  $cgi->b('<FONT SIZE="+1">Enter a number:</FONT>'),
-	  $cgi->br,
-	  $cgi->textarea('name' => 'number',
-		         'rows' => '10',
-		         'columns' => '60'),
-	  $cgi->p,
-	  $cgi->submit(name=>'Name that number'),
-	  $cgi->end_form;
+		  "example / help");
+    print " page for an explanation of the options below.\n";
+    print $cgi->br, "\n";
+    print "See also the ", "\n";
+    print $cgi->a({'HREF' =>
+	  	   "http://www.isthe.com/chongo/tech/math/number/number.html"},
+		  "English name of a number home page"), "\n";
+    print ".\n";
+    print $cgi->p, "\n";
+    print $cgi->start_form, "\n";
+    print "Type of input:", "\n";
+    print "&nbsp;" x 4, "\n";
+    print $cgi->radio_group(-name => 'input',
+			  -values => ['number', 'exp', 'latin'],
+			  -labels => \%input_label,
+			  -default => 'number'), "\n";
+    print $cgi->br, "\n";
+    print "Type of output:", "\n";
+    print "&nbsp;" x 2, "\n";
+    print $cgi->radio_group(-name => 'output',
+			  -values => ['name', 'digit'],
+			  -labels => \%output_label,
+			  -default => 'name'), "\n";
+    print $cgi->br, "\n";
+    print "Name system:", "\n";
+    print "&nbsp;" x 4, "\n";
+    print $cgi->radio_group(-name => 'system',
+			  -values => ['usa', 'europe'],
+			  -labels => \%system_label,
+			  -default => 'usa'), "\n";
+    print $cgi->br, "\n";
+    print "Millia style:", "\n";
+    print "&nbsp;" x 8, "\n";
+    print $cgi->radio_group(-name => 'millia',
+			  -values => ['dup', 'power'],
+			  -labels => \%millia_label,
+			  -default => 'dup'), "\n";
+    print $cgi->br, "\n";
+    print "Dash style:", "\n";
+    print "&nbsp;" x 10, "\n";
+    print $cgi->radio_group(-name => 'dash',
+			  -values => ['nodash', 'dash'],
+			  -labels => \%dash_label,
+			  -default => 'nodash'), "\n";
+    print $cgi->p, "\n";
+    print $cgi->b('<FONT SIZE="+1">Enter a number:</FONT>'), "\n";
+    print $cgi->br, "\n";
     print $cgi->textarea(-name => 'number',
 		         -rows => '10',
 		         -columns => '60'), "\n";
@@ -1765,65 +1797,41 @@ sub cgi_form()
     print $cgi->submit(name=>'Name that number'), "\n";
     print $cgi->end_form, "\n";
 
-    if ($cgi->param()) {
-
-	# determine the input mode
-	#
-	if (defined($cgi->param('input'))) {
-	    if ($cgi->param('input') eq "exp") {
-		$opt_p = 1;	# assume -p (power of 10)
-	    } elsif ($cgi->param('input') eq "latin") {
-		$opt_l = 1;	# assume -l (1000 ^ number))
-	    }
+    # Prep for the reply
     #
+    # We need to convert the CGI parameters into values that
+    # would have been set if we were processing the input
+    # on the command line.
+    #
+    # determine the input mode
+    #
+    if (defined($cgi->param('input'))) {
 	if ($cgi->param('input') eq "exp") {
-	# determine the output mode
-	#
-	if (defined($cgi->param('output')) &&
-	    $cgi->param('output') eq "digit") {
-	    $opt_c = 1;		# assume -c (comma/dot decimal)
+	    $opt_p = 1;	# assume -p (power of 10)
+	} elsif ($cgi->param('input') eq "latin") {
+	    $opt_l = 1;	# assume -l (1000 ^ number))
 	}
+    }
+
     # determine the output mode
-	# determine the system
-	#
-	if (defined($cgi->param('system')) &&
-	    $cgi->param('system') eq "europe") {
-	    $opt_e = 1;		# assume -e (European system)
-	}
+    #
+    if (defined($cgi->param('output')) &&
+	$cgi->param('output') eq "digit") {
+	$opt_c = 1;		# assume -c (comma/dot decimal)
+    }
+
     # determine the system
-	# determine the millia style
-	#
-	if (defined($cgi->param('millia')) &&
-	    $cgi->param('millia') eq "power") {
-	    $opt_m = 1;		# assume -m (compact millia method)
-	}
+    #
+    if (defined($cgi->param('system')) &&
+	$cgi->param('system') eq "europe") {
+	$opt_e = 1;		# assume -e (European system)
+    }
 
-	# determine the dash method in names
-	#
-	if (defined($cgi->param('dash')) && $cgi->param('dash') eq "dash") {
-	    $opt_d = 1;		# assume -d (use -'s in names)
-	}
-
-	# get ready to print the value
-	#
-	print $cgi->hr,
-	      $cgi->p;
-	if ($opt_c) {
-	    print $cgi->b("Decimal value:");
-	} else {
-	    print $cgi->b("Name of number:");
-	}
-	print "\n<BLOCKQUOTE>",
-	      "<PRE>";
     # determine the millia style
-    # We have just the initial display.  There is no input value.
-    # Just print the trailer and exit, do not return.
+    #
     if (defined($cgi->param('millia')) &&
-    } else {
-	print "\n<BLOCKQUOTE>\n",
-	      "<PRE>";
-	trailer(0);
-	exit(0);
+	$cgi->param('millia') eq "power") {
+	$opt_m = 1;		# assume -m (compact millia method)
     }
 
     # determine the dash method in names
@@ -1845,12 +1853,22 @@ sub cgi_form()
 # If the arg passed is 1, then the message about obtaining the source
 # if suppressed.
 #
-    print "</PRE>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
+sub trailer($)
+{
+    my $arg = $_[0];
+
+    # close off input
+    #
+    if ($preblock && $html == 1) {
+	print $cgi->p, "\n";
+	print "</PRE>\n</BLOCKQUOTE>\n";
+    }
 
     # section off with a line
     #
     if ($html == 1) {
 	print "<HR>\n<P>\n";
+    }
 
     # display how to get to the source
     #
@@ -1882,14 +1900,17 @@ END_OF_HTML
     <STRONG>/\\oo/\\</STRONG>
     </BLOCKQUOTE>
 
-# big_error - print a too big error and exit
+    </BODY>
     </HTML>
-sub big_error()
+END_OF_HTML
 }
 
 
 # big_err - print a too big error and exit
-    print "</PRE>\n<P>\n";
+#
+sub big_err()
+{
+
     # close off input
     #
     if ($preblock) {
@@ -1975,12 +1996,12 @@ sub big_error()
 	  " reads a number from standard input, has no size limits",
 	  "and does not perform any CGI/HTML actions.",
 	  "</ol>\n",
-# error - report an error in CGI/HTML or die form
+	  $cgi->p;
     trailer(1);
     exit(1);
 }
 
-sub error($)
+
 # err - report an error in CGI/HTML or die form
 #
 # given:
@@ -1995,10 +2016,12 @@ sub err($)
     if ($html == 0 || $cgi == 0) {
 	if ($html != 0) {
 	    print "Content-type: text/plain\n\n";
-    print $cgi->p,
-	  $cgi->b("SORRY! "),
-	  $msg,
-	  "\n";
+	}
+	die $msg, "\n";
+    }
+
+    # issue an error message in CGI/HTML
+    #
     if ($preblock == 0) {
 	print $cgi->p, "\n";
 	print $cgi->hr, "\n";
