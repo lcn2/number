@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.11 $
+#  @(#} $Revision: 1.12 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -70,7 +70,7 @@ use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
 use Getopt::Std;
 
 # version
-my $version = '$Revision: 1.11 $';
+my $version = '$Revision: 1.12 $';
 
 # Warning state
 my $warn = $^W;
@@ -82,10 +82,10 @@ my $dash = "";
 # Latin root tables
 #
 my @l_unit = ( "" , qw( un do tre quattuor quin sex septen octo novem ));
-my @l_ten = ("", qw( deci viginti triginti quadraginti quinquaginti
-		     sexaginti septuaginti octoginti nonaginti ));
-my @l_hundred = ("", qw( cent ducent trecent quadringent quingent
-		         sescent septingent octingent nongent ));
+my @l_ten = ("", qw( dec vigin trigin quadragin quinquagin
+		     sexagin septuagin octogin nonagin ));
+my @l_hundred = ("", qw( cen ducen trecen quadringen quingen
+		         sescen septingen octingen nongen ));
 my @l_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
 
 # English names - names from 0 thru 999
@@ -624,11 +624,11 @@ sub latin_root($$)
 	# results in no output do that we wind up with
 
 	# print the 3 digits
-	#	milla-illion
+	#	millia-tillion
 	# We will skip the printing of the 3 digits if
 	# we have just 001 in all but the lowest set of 3.
 	# This results in no output do that we wind up with
-	#	un-milla-illion
+	#	un-millia-tillion
 	#
 	if ($i == $len-1 || $d1 != 1 || $d2 != 0 || $d3 != 0) {
 	#
@@ -645,12 +645,18 @@ sub latin_root($$)
 		    while (($millia_cnt -= $big_bias) > $big_bias) {
 			print "millia$dash" x $big_bias;
 		    }
-    # If we ended with the ten's place being 0, then we need
-    # to emit a 't' so that centiunillion becomes centiuntillion
+		}
+    # instead of the usual 'ti'.  This is decause we say:
 	    }
-    if ($d2 == 0 && $d1 == 0) {
+	}
+    }
+
+    # For the case of ending in 1x we need to end in an 'i'
+    # instead of the usual 'ti'.  This is because we say:
     #
-    } elsif ($d2 == 0) {
+    if ($d2 == 1) {
+    #
+    # instead of:
     #
     #	trecen-dec-tillion
     #
