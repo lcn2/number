@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl
-#  @(#} $Revision: 1.15 $
+#  @(#} $Revision: 1.16 $
 #  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
 #
 # number - print the English name of a number in non-HTML form
@@ -73,7 +73,7 @@ use Getopt::Std;
 use CGI qw(:standard);
 
 # version
-my $version = '$Revision: 1.15 $';
+my $version = '$Revision: 1.16 $';
 
 # Warning state
 my $warn = $^W;
@@ -323,7 +323,9 @@ MAIN:
 
     # otherwise print the first part of the response if allowed
     #
-    &trailer(0);
+    } else {
+	&trailer(0);
+    }
 
     # If we are doing CGI/HTML stuff, print the trailer
     #
