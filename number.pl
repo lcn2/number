@@ -1,5 +1,5 @@
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.9 $
+#  @(#} $Revision: 2.10 $
 #
 # number - print the English name of a number of any size
 #
@@ -82,10 +82,10 @@ use strict;
 use Math::BigInt;
 use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
-use CGI qw(:standard);
+use CGI;
 
 # version
-my $version = '$Revision: 2.9 $';
+my $version = '$Revision: 2.10 $';
 
 # GetOptions argument
 #
