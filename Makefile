@@ -1,5 +1,5 @@
 #!/bin/make
-#  @(#} $Revision: 1.4 $
+#  @(#} $Revision: 1.5 $
 #  @(#} RCS control in //prime.corp/usr/local/src/cmd/number/Makefile
 #
 # number - number makefile
@@ -23,9 +23,9 @@ number.cgi: number.pl
 	chmod 0555 number.cgi
 
 install: all
-	install -F ${DESTDIR} -m ${MODE} ${SCRIPTS}
 	install -F ${WWW} -m 0755 number
 	install -F ${WWW} -m 0755 number.cgi
+	install -F ${DESTDIR} -m ${MODE} ${SCRIPTS}
 
 clean:
 
