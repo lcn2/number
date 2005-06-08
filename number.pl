@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.23 $
+#  @(#} $Revision: 2.24 $
 #
 # number - print the English name of a number of any size
 #
@@ -91,7 +91,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.23 $';
+my $version = '$Revision: 2.24 $';
 
 # CGI / HTML variables
 #
@@ -1772,7 +1772,12 @@ sub cgi_form()
     print $cgi->a({'HREF' =>
 	  	   "http://www.isthe.com/chongo/tech/math/number/number.html"},
 		  "English name of a number home page"), "\n";
-    print ".\n";
+    print "as well as the\n";
+    print $cgi->br, "\n";
+    print $cgi->a({'HREF' =>
+	  	   "http://www.isthe.com/chongo/tech/math/number/howhigh.html"},
+		  "How high can you count?"), "\n";
+    print "page.\n";
     print $cgi->p, "\n";
     print $cgi->start_form, "\n";
     print "Type of input:", "\n";
