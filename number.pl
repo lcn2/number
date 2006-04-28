@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.24 $
+#  @(#} $Revision: 2.25 $
 #
 # number - print the English name of a number of any size
 #
@@ -91,7 +91,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.24 $';
+my $version = '$Revision: 2.25 $';
 
 # CGI / HTML variables
 #
@@ -127,7 +127,7 @@ $SIG{ALRM} = sub { err("timeout"); };
 # For DOS (Denial Of Service) protection prevent file uploads and
 # really big "POSTS"
 #
-$CGI::POST_MAX = $big_input + 4096;	# limit post size to max digits + 4k
+$CGI::POST_MAX = $big_input + 8192;	# limit post size to max digits + 8k
 $CGI::DISABLE_UPLOADS = 1;		# no uploads
 
 # We have optimizations that allow us to treat a large power of 10 bias
