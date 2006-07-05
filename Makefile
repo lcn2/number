@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.21 $
-# @(#) $Id: Makefile,v 1.21 2000/09/22 04:05:34 chongo Exp chongo $
+# @(#) $Revision: 1.22 $
+# @(#) $Id: Makefile,v 1.22 2002/03/14 06:44:22 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -35,6 +35,17 @@ SERVERROOT= /web/isthe/chroot
 WWWROOT= ${SERVERROOT}/html
 WWW= ${WWWROOT}/chongo/tech/math/number
 CGIBIN= ${SERVERROOT}/cgi-bin
+CGIBIN2= /var/www/cgi-bin/www.isthe.com
+
+# who must own cgi scripts so that apache suexec will run them
+#
+CGI_USER= cgi
+CGI_GROUP= cgi
+
+# non-CGI stuff that must not be accessed by suexec
+#
+ALT_USER= chongo
+ALT_GROUP= wwwadmin
 
 # what to build
 TARGETS= number.cgi number
@@ -54,12 +65,16 @@ number: number.pl
 install: all
 	${INSTALL} -m 0555 number ${DESTDIR}
 	-@if [ -d ${WWW} ]; then \
-	    echo "	${INSTALL} -m 0644 number ${WWW}"; \
-	    ${INSTALL} -m 0644 number ${WWW}; \
+	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0664 number ${WWW}"; \
+	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0664 number ${WWW}; \
 	fi
 	-@if [ -d ${CGIBIN} ]; then \
-	    echo "	${INSTALL} -m 0555 number.cgi ${CGIBIN}"; \
-	    ${INSTALL} -m 0555 number.cgi ${CGIBIN}; \
+	    echo "	${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}"; \
+	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}; \
+	fi
+	-@if [ -d ${CGIBIN2} ]; then \
+	    echo "	${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN2}"; \
+	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN2}; \
 	fi
 
 clean:
