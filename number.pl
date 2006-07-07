@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.25 $
+#  @(#} $Revision: 2.26 $
 #
 # number - print the English name of a number of any size
 #
@@ -91,7 +91,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.25 $';
+my $version = '$Revision: 2.26 $';
 
 # CGI / HTML variables
 #
@@ -117,7 +117,7 @@ my $warn = $^W;
 # very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
-my $big_input = 32768;		# too many input digits for the web
+my $big_input = 16384;		# too many input digits for the web
 my $big_latin_power = 100000;	# 1000^big_latin_power is limit for the web
 my $big_decimal = 1000000;	# don't expand >$big_decimal digits on the web
 my $big_digits = $big_input;	# too many digits to produce a name for the web
