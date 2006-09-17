@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.24 $
-# @(#) $Id: Makefile,v 1.24 2006/09/17 23:31:21 chongo Exp chongo $
+# @(#) $Revision: 1.25 $
+# @(#) $Id: Makefile,v 1.25 2006/09/17 23:34:51 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -37,6 +37,7 @@ SERVERROOT= /web/isthe/chroot
 WWWROOT= ${SERVERROOT}/html
 WWW= ${WWWROOT}/chongo/tech/math/number
 CGIBIN= /var/www/cgi-bin/www.isthe.com
+WWWSRC= ${WWWROOT}/chongo/src/number
 
 # who must own cgi scripts so that apache suexec will run them
 #
@@ -73,8 +74,10 @@ install: all
 	-@if [ -d ${WWW} ]; then \
 	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0555 number ${WWW}"; \
 	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0555 number ${WWW}; \
-	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWW}"; \
-	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWW}; \
+	fi
+	-@if [ -d ${WWWSRC} ]; then \
+	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWWSRC}"; \
+	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWWSRC}; \
 	fi
 	-@if [ -d ${CGIBIN} ]; then \
 	    echo "	${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}"; \
