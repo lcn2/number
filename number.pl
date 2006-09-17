@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.28 $
+#  @(#} $Revision: 2.29 $
 #
 # number - print the English name of a number of any size
 #
@@ -27,19 +27,23 @@
 #
 # When run as:
 #
-#	number	(or number.pl or anything not ending in .cgi)
+#	number		(or number.pl or anything not ending in .cgi)
 #
-# then it will run without the web/CGI size limitations.
+# then the program will run without the web/CGI size limitations.
+# The size of number, in the non-cgi mode, is only limited by the
+# amount of virtual memory in your computer!
 #
-# Be sure to see:
+####
+#
+# Be sure to visit:
 #
 #	http://www.isthe.com/chongo/tech/math/number/number.html
-#
-# For an example of names of large numbers, see:
-#
+# and:
+#	http://www.isthe.com/chongo/tech/math/number/howhigh.html
+# and:
 #	http://www.isthe.com/chongo/tech/math/prime/mersenne.html
 #
-# for examples/help as well as the latest version of this code.
+####
 #
 # Copyright (c) 1998-2006 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -64,23 +68,25 @@
 # With many thanks for Latin suggestions from:
 #
 #	Jeff Drummond
-#	jjd at sgi.com
 #
 # as well as thanks to these people for their bug reports on earlier versions:
 #
 #	Dr K.M. Briggs			Fredrik Mansfeld
-#	kmb28 at cus.cam.ac.uk		fredrik at abaris.se
 #
 # Comments, suggestions, bug fixes and questions about these routines
-# are welcome.  Send EMail to the address given below.
+# are welcome.
 #
 # Happy bit twiddling,
 #
 #	Landon Curt Noll
-#	http://www.isthe.com/chongo
+#	http://www.isthe.com/chongo/index.html
 #
-# chongo was here	/\../\
+# Send EMail to: number-mail at asthe dot com
 #
+# chongo (Share and enjoy! :-) - chongo was here) /\../\
+#
+####
+
 
 # requirements
 #
@@ -91,7 +97,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.28 $';
+my $version = '$Revision: 2.29 $';
 
 # CGI / HTML variables
 #
@@ -220,6 +226,7 @@ my $help = qq{Usage:
     You are using $version.
 
     chongo <number-mail at asthe dot com> was here /\\../\\
+    http://www.isthe.com/chongo/index.html
 };
 
 # forward declatations
