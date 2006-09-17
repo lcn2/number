@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.23 $
-# @(#) $Id: Makefile,v 1.23 2006/07/05 17:48:20 chongo Exp chongo $
+# @(#) $Revision: 1.24 $
+# @(#) $Id: Makefile,v 1.24 2006/09/17 23:31:21 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -65,7 +65,7 @@ number: number.pl
 
 number.tgz: number.pl number.cgi number
 	rm -f number.tgz
-	${TAR} -zcvf number.tgz number.pl number.cgi number
+	${TAR} -zcvf number.tgz number number.cgi
 	chmod 0444 number.tgz
 
 install: all
