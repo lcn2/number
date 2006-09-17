@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.22 $
-# @(#) $Id: Makefile,v 1.22 2002/03/14 06:44:22 chongo Exp chongo $
+# @(#) $Revision: 1.23 $
+# @(#) $Id: Makefile,v 1.23 2006/07/05 17:48:20 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -28,14 +28,15 @@
 
 SHELL= /bin/sh
 INSTALL= install
+TAR= tar
+CHMOD= chmod
 
 # locations
 DESTDIR= /usr/local/bin
 SERVERROOT= /web/isthe/chroot
 WWWROOT= ${SERVERROOT}/html
 WWW= ${WWWROOT}/chongo/tech/math/number
-CGIBIN= ${SERVERROOT}/cgi-bin
-CGIBIN2= /var/www/cgi-bin/www.isthe.com
+CGIBIN= /var/www/cgi-bin/www.isthe.com
 
 # who must own cgi scripts so that apache suexec will run them
 #
@@ -48,7 +49,7 @@ ALT_USER= chongo
 ALT_GROUP= wwwadmin
 
 # what to build
-TARGETS= number.cgi number
+TARGETS= number.cgi number number.tgz
 
 all: ${TARGETS}
 
@@ -62,19 +63,22 @@ number: number.pl
 	cp number.pl number
 	chmod 0555 number
 
+number.tgz: number.pl number.cgi number
+	rm -f number.tgz
+	${TAR} -zcvf number.tgz number.pl number.cgi number
+	chmod 0444 number.tgz
+
 install: all
 	${INSTALL} -m 0555 number ${DESTDIR}
 	-@if [ -d ${WWW} ]; then \
-	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0664 number ${WWW}"; \
-	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0664 number ${WWW}; \
+	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0555 number ${WWW}"; \
+	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0555 number ${WWW}; \
+	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWW}"; \
+	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWW}; \
 	fi
 	-@if [ -d ${CGIBIN} ]; then \
 	    echo "	${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}"; \
 	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}; \
-	fi
-	-@if [ -d ${CGIBIN2} ]; then \
-	    echo "	${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN2}"; \
-	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN2}; \
 	fi
 
 clean:
