@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.27 $
+#  @(#} $Revision: 2.28 $
 #
 # number - print the English name of a number of any size
 #
@@ -41,7 +41,7 @@
 #
 # for examples/help as well as the latest version of this code.
 #
-# Copyright (c) 1998-2005 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2006 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -91,7 +91,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.27 $';
+my $version = '$Revision: 2.28 $';
 
 # CGI / HTML variables
 #
@@ -209,9 +209,13 @@ my $help = qq{Usage:
 
 	./number -- -123
 
-    Updates from time to time are made to this program.
-    See http://www.isthe.com/chongo/tech/math/number/number.html
-    for updates.
+    Updates from time to time are made to this program.  See:
+
+    	http://www.isthe.com/chongo/tech/math/number/number.html
+
+    for updates.  See also:
+
+	http://www.isthe.com/chongo/tech/math/number/howhigh.html
 
     You are using $version.
 
