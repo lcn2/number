@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.29 $
+#  @(#} $Revision: 2.30 $
 #
 # number - print the English name of a number of any size
 #
@@ -97,7 +97,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.29 $';
+my $version = '$Revision: 2.30 $';
 
 # CGI / HTML variables
 #
@@ -128,7 +128,6 @@ my $big_latin_power = 10000;	# 1000^big_latin_power is limit for the web
 my $big_decimal = 100000;	# don't expand >$big_decimal digits on the web
 my $big_digits = $big_input;	# too many digits to produce a name for the web
 my $big_timeout = 10;		# max time to do anything
-$SIG{ALRM} = sub { err("timeout"); };
 
 # For DOS (Denial Of Service) protection prevent file uploads and
 # really big "POSTS"
@@ -247,6 +246,7 @@ sub err($);
 # signal processing
 #
 $SIG{PIPE} = sub { exit(2); };
+$SIG{ALRM} = sub { err("timeout"); };
 
 # main
 #
