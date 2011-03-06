@@ -710,6 +710,7 @@ MAIN:
 	}
 	print $cgi->p, "\n";
 	print "<BLOCKQUOTE><PRE>\n";
+	$preblock = 1;
     }
 
     # catch the case where we only want to enter a power of 10
@@ -2005,29 +2006,29 @@ sub cgi_form()
     # radio label sets
     #
     my %input_label = (
-	"number" => " Just a number",
-	"exp" => " Power of 10",
-	"latin" => " Latin power (1000^number)"
+	"number" => "Just a number ",
+	"exp" => " Power of 10 ",
+	"latin" => " Latin power (1000^number) "
     );
     my %output_label = (
-	"name" => " English name",
-	"digit" => " Decimal digits if input is just a number"
+	"name" => " English name ",
+	"digit" => " Decimal digits if input is just a number "
     );
     my %system_label = (
-	"american" => " American ruleset",
-	"european" => " European ruleset"
+	"american" => " American ruleset ",
+	"european" => " European ruleset "
     );
     my %millia_label = (
-	"dup" => " milliamillia...",
-	"power" => " millia^7 (compact form)"
+	"dup" => " milliamillia... ",
+	"power" => " millia^7 (compact form) "
     );
     my %dash_label = (
-	"nodash" => " without any -'s",
-	"dash" => " with -'s between parts of words"
+	"nodash" => " without any -'s ",
+	"dash" => " with -'s between parts of words "
     );
     my %latin_formality = (
-	"formal" => "use duo and octa",
-	"informal" => "use do, du and octo"
+	"formal" => " formal duo and octa ",
+	"informal" => " informal do, du and octo "
     );
 
     print $cgi->header, "\n";
@@ -2069,15 +2070,14 @@ sub cgi_form()
 			  -default => 'name'), "\n";
     print $cgi->br, "\n";
     print "Ruleset:", "\n";
-    print "&nbsp;" x 4, "\n";
+    print "&nbsp;" x 14, "\n";
     print $cgi->radio_group(-name => 'ruleset',
 			  -values => ['american', 'european'],
 			  -labels => \%system_label,
 			  -default => 'american'), "\n";
-    # XXX - format Latin form section - XXX
     print $cgi->br, "\n";
     print "Latin formality:", "\n";
-    print "&nbsp;" x 8, "\n";
+    print "&nbsp;" x 2, "\n";
     print $cgi->radio_group(-name => 'latin_formality',
 			  -values => ['formal', 'informal'],
 			  -labels => \%latin_formality,
@@ -2091,7 +2091,7 @@ sub cgi_form()
 			  -default => 'dup'), "\n";
     print $cgi->br, "\n";
     print "Dash style:", "\n";
-    print "&nbsp;" x 10, "\n";
+    print "&nbsp;" x 9, "\n";
     print $cgi->radio_group(-name => 'dash',
 			  -values => ['nodash', 'dash'],
 			  -labels => \%dash_label,
@@ -2153,8 +2153,8 @@ sub cgi_form()
 
     # determine formal vs informal
     #
-    if (defined($cgi->param('latin_form')) &&
-        $cgi->param('latin_form') eq "informal") {
+    if (defined($cgi->param('latin_formality')) &&
+        $cgi->param('latin_formality') eq "informal") {
 	$opt_i = 1;		# assume -i (informal Latin)
     }
 
@@ -2178,7 +2178,6 @@ sub trailer($)
     # close off input
     #
     if ($preblock && $html == 1) {
-	print $cgi->p, "\n";
 	print "</PRE>\n</BLOCKQUOTE>\n";
     }
 
