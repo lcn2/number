@@ -1,11 +1,12 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 2.30 $
+#  @(#} $Revision: 3.1 $
 #
 # number - print the English name of a number of any size
 #
 # usage:
-#	number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [number]
+#	number [-p] [-l] [-d] [-m] [-c] [-o] [-i]
+#	       [-r ruleset | -e] [-h] [[--] number]
 #
 #	-p	input is a power of 10
 #	-l	input is a Latin power (1000^x)
@@ -13,7 +14,20 @@
 #	-m	output name in a more compact exponential form
 #	-c	output number in comma/dot form
 #	-o	output number on a single line
-#	-e	use European instead of American name system
+#	-i	Use informal Latin powers (default: use formal)
+#		Use dodec over duodec, ducen over duocen, octogin over octagin
+#
+#	-r ruleset 	Output using ruleset:
+#
+#	    -r american	  Output using the American ruleset (default)
+#	    -r us	  Short for -r american
+#	    -r european	  Outout using the European ruleset
+#	    -r euro	  Short for -r european
+#
+#	    NOTE: ruleset names are case independent
+#
+#	-e	Same as "-r european", kept for backward compatibility
+#
 #	-h	print a help message only
 #
 # If number is omitted, then it is read from standard input.
@@ -45,7 +59,7 @@
 #
 ####
 #
-# Copyright (c) 1998-2006 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2011 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -88,16 +102,122 @@
 ####
 
 
+####
+#
+#	PLEASE READ	PLEASE READ	PLEASE READ	PLEASE READ
+#
+###########################################
+# On the purpose and history of this code #
+###########################################
+#
+# The English number system we use today is a mix of old English, old
+# French and old commercial Latin to name just a few sources. Extensions
+# beyond the Latin power of 21 was based in part commercial Latin of
+# Venice, particularly of the 14th and early 15th century when Republic
+# of Venice. This Latin differs from liturgical Latin and modern
+# standard Latin in several ways.  One of these differences is
+# "do" vs. "duo" as in "do-dec-illion" vs. "duo-dec-illion", and is
+# "du" vs. "duo" as in "ducen-tillion" vs. "duo-cen-tillion".  Adina
+# differences include, but are not limited to “octogin” vs. “octagin”
+# and “millia” vs. “milia”. It is unfortunate that consistent spelling
+# was not a hallmark of that era!
+#
+# When we codifying the rules for “The English name of a number”, we
+# were tempted to "improve" the system today.  For example there are
+# a number of aspects to the system that we do not like.  The
+# inconsistency of “do/du” (as in “do-dec-illion” and “ducen-tillion”)
+# and the "four and twenty" rule (as in the name "quattuor-vigin-tillion")
+# is unfortunate.
+#
+# When we set down the “name of the number” system we were attempting
+# to programmatically describe the system we had using the roots of
+# the language on which it was based.  If we tweaked the system to
+# our preferences in one place then soon we would have been describing
+# our preferences instead of the system we use today.  So we resisted
+# the temptation to improve and stuck to strict codification of the
+# names of the Latin powers.
+#
+# However since that time, we have uncovered use of “duo” in the 14th
+# and early 15th centuries.  And since spelling then was often
+# inconsistent (it was not unusual to find a word spelled several
+# ways in some documents), we feel safe to select “duo” in the name
+# of consistency.  I.e., if we are forced to choose a spelling, then
+# we will opt for the more consistent spelling that produces a simpler
+# algorithm.  Therefore starting with version 3, we will use “duo”
+# in place of “du” and “do”.  However for backward compatibility, a
+# flag will be used to generate original Latin power roots.
+#
+############################################################
+# Regarding those proposing improved number naming systems #
+############################################################
+#
+# There exist a number of proposals offering improved number naming
+# systems.  We agree that names of numbers used in English could be
+# improved if one was not interested in remaining backward compatible
+# with the system in use today.  We also agree that the extension
+# beyond the Latin power of 21 may be improved if one is willing to
+# ignore the historic Latin power roots.
+#
+# This program will NOT be modified to reflect such recommendations
+# for improvements for two important reasons:
+#
+#     1) The “name of the number” system algorithm only describes an
+#        extension to a historical system using the spelling and grammar
+#        rules of that era.  Modern Latin rules and more general proposals
+#        for improved number naming systems are focused in ideas of
+#        today, not what was in place centuries ago when the English
+#        number naming system began.
+#
+#     2) We do not have time or the energy required to codify alternate
+#        proposals. While we wish the proponents of those systems success,
+#        the purpose this algorithm is to describe the extension of the
+#        common naming system today using the historic rules of the
+#        languages on which today’s system is based.
+#
+##################################################
+# Regarding regional English language variations #
+##################################################
+#
+# There exist many of variations of the names of numbers in the English
+# language.  Examples include this such as “zero” vs. “naught”,
+# “thousand million” vs. “millard”, “one thousand two hundred” vs.
+# “twelve hundred”, “two hundred and forty” vs. “two hundred forty”,
+# etc.  English is a multifaceted language.  English spelling and
+# grammar of New Zealand, Canada, Australia, U.K., U.S.A., just to
+# name a few places will differ.  Even the output of digits can differ
+# among English speaking countries.  For example: “123,456.789” vs.
+# “123 456.789”.
+#
+# The original code only described just the “American” and “European”
+# systems. We don’t have the time, or the energy to codify the many
+# English variations.  If you wish extend this code to describes a
+# favorite variation, then you are welcome to send us a patch in
+# “diff –u” (unified context) form to:
+#
+#     number-mail at asthe dot com
+#
+# To invoke your variation, please use:
+#
+#     -r name_of_your_ruleset
+#
+# We will consider patches that describe a regional English variation
+# only.  Please do not submit a patch for an "improved number naming
+# systems" (see the previous section).
+#
+####
+
+
 # requirements
 #
 use strict;
 use bytes;
 use Math::BigInt;
-use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_e $opt_h);
+use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
+	    $opt_r $opt_e $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 2.30 $';
+my $version = '$Revision: 3.1 $';
 
 # CGI / HTML variables
 #
@@ -113,7 +233,8 @@ if ($0 =~ /\.cgi$/) {
 #
 my %optctl = (
     "p" => \$opt_p, "l" => \$opt_l, "d" => \$opt_d, "m" => \$opt_m,
-    "c" => \$opt_c, "o" => \$opt_o, "e" => \$opt_e, "h" => \$opt_h
+    "c" => \$opt_c, "o" => \$opt_o, "i" => \$opt_i, "r=s" => \$opt_r,
+    "h" => \$opt_h,
 );
 
 # Warning state
@@ -154,18 +275,70 @@ my $ten = Math::BigInt->new("10");
 my $hundred = Math::BigInt->new("100");
 my $five_hundred = Math::BigInt->new("500");
 
+# ruleset (using -r)
+#
+
+# map ruleset strings into canonical ruleset names
+#
+my %ruleset_canonical = (
+    "american" => "american",
+    "us" => "american",
+    "usa" => "american",
+    "european" => "european",
+    "euro" => "european",
+);
+
+# tables based on the canonical ruleset name (see above)
+#
+my %ruleset_sep = (
+    "american" => ",",
+    "european" => ".",
+);
+my %ruleset_point = (
+    "american" => ".",
+    "european" => ",",
+);
+my %ruleset_point_name = (
+    "american" => "point",
+    "european" => "comma",
+);
+my %ruleset_kilo = (
+    "american" => \&american_kilo,
+    "european" => \&european_kilo,
+);
+my %ruleset_latin_root = (
+    "american" => \&american_latin_root,
+    "european" => \&european_latin_root,
+);
+
 # To help pronounce values we put $dash between word parts
 #
 my $dash = "";
 
-# Latin root tables
+# Informal Latin root tables (using -i)
 #
-my @l_unit = ( "" , qw( un do tre quattuor quin sex septen octo novem ));
-my @l_ten = ("", qw( dec vigin trigin quadragin quinquagin
+my @old_unit = ( "" , qw( un do tre quattuor quin sex septen octo novem ));
+my @old_ten = ("", qw( dec vigin trigin quadragin quinquagin
 		     sexagin septuagin octogin nonagin ));
-my @l_hundred = ("", qw( cen ducen trecen quadringen quingen
+my @old_hundred = ("", qw( cen ducen trecen quadringen quingen
 		         sescen septingen octingen nongen ));
-my @l_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
+my @old_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
+
+# Formal Latin root tables (without -i)
+#
+my @new_unit = ( "" , qw( un duo tre quattuor quin sex septen octo novem ));
+my @new_ten = ("", qw( dec vigin trigin quadragin quinquagin
+		     sexagin septuagin octagin nonagin ));
+my @new_hundred = ("", qw( cen duocen trecen quadringen quingen
+		         sescen septingen octingen nongen ));
+my @new_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
+
+# The selected Latin root table (depends on -u or not -u)
+#
+my @l_unit;
+my @l_ten;
+my @l_hundred;
+my @l_special;
 
 # English names - names from 0 thru 999
 #
@@ -182,10 +355,11 @@ my @teens = qw(ten eleven twelve thirteen fourteen
 
 # usage and help
 #
-my $usage = "number [-p] [-l] [-d] [-m] [-c] [-o] [-e] [-h] [[--] number]";
+my $usage = "[-p] [-l] [-d] [-m] [-c] [-o] [-i]\n" .
+	    "\t\t[-r ruleset | -e] [-h] [[--] number]";
 my $help = qq{Usage:
 
-    $0 $usage
+    $0\t$usage
 
 	-p	input is a power of 10
 	-l	input is a Latin power (1000^x)
@@ -193,8 +367,20 @@ my $help = qq{Usage:
 	-m	output name in a more compact exponentiation form
 	-c	output number in comma/dot form
 	-o	output number on a single line
-	-e	use European instead of American name system
+	-i	Use informal Latin powers (default: use formal)
+		Use dodec over duodec, ducen over duocen, octogin over octagin
+
+	-r ruleset	Output using ruleset:
+
+	    -r american   Output using the American ruleset (default)
+	    -r us	  Short for -r american
+	    -r european   Outout using the European ruleset
+	    -r euro	  Short for -r european
+
+	    NOTE: ruleset names are case independent
+
 	-h	print a help message only
+
 	--	the arg that follows is a number (useful if number is <0)
 
     If number is not given on the command line it is read from standard
@@ -235,6 +421,8 @@ sub print_number($$$$$$$);
 sub latin_root($$);
 sub american_kilo($);
 sub european_kilo($);
+sub american_latin_root($$);
+sub european_latin_root($$);
 sub power_of_ten($$$);
 sub print_name($$$$$);
 sub print_3($);
@@ -258,7 +446,7 @@ MAIN:
     my $point;		# decimal point or comma
     my $integer;	# integer part
     my $fract;		# fractional part
-    my $system;		# American or European (but not a Swallow :-))
+    my $ruleset;	# american, european, etc. (but not a Swallow :-))
     my $visit;		# visit counter or error message
     my $num;		# input value
     my $bias;		# power of 10 bias (as BigInt) during de-sci conversion
@@ -277,6 +465,8 @@ MAIN:
     $opt_m = 0;
     $opt_c = 0;
     $opt_o = 0;
+    $opt_i = 0;
+    $opt_r = undef;
     $opt_e = 0;
     $opt_h = 0;
 
@@ -336,6 +526,48 @@ MAIN:
 	}
     }
 
+    # -e conflichts with -r ruleset
+    #
+    if ($opt_e && $opt_r) {
+	if ($html == 0) {
+	    err("-e conflicts with -r ruleset");
+	} else {
+	    err("Do not specify both <B>-e</B> and <B>-r ruleset</B>.\n " .
+	        "Use just <B>-r european</B> instead.");
+	}
+    }
+
+    # -e is the same as "-r european"
+    #
+    if ($opt_e) {
+	$opt_r = "eurpoean";
+
+    # default to American ruleset
+    #
+    } elsif (! defined $opt_r) {
+	$opt_r = "american";
+    }
+
+    # canonicalize ruleset to all lower case
+    #
+    $opt_r = lc($opt_r);
+
+    # determine the name system being used
+    #
+    if (defined $ruleset_canonical{$opt_r}) {
+	$ruleset = $ruleset_canonical{$opt_r};
+    } else {
+	err("Unknown -r ruleset name: $opt_r");
+    }
+    $sep = $ruleset_sep{$ruleset};
+    if (!defined $sep) {
+	err("FATAL: Undefined separator value for ruleset: $ruleset");
+    }
+    $point = $ruleset_point{$ruleset};
+    if (!defined $point) {
+	err("FATAL: Undefined point value for ruleset: $ruleset");
+    }
+
     # determine if dashes will appear in the name
     #
     if ($opt_d) {
@@ -345,16 +577,20 @@ MAIN:
 	$dash = "-";
     }
 
-    # determine the name system being used
+    # determine the Latin root naming system
     #
-    if ($opt_e) {
-	$system = "European";
-	$sep = ".";
-	$point = ",";
+    if ($opt_i) {
+    	# informal Latin room system (using du/do)
+	@l_unit = @old_unit;
+	@l_ten = @old_ten;
+	@l_hundred = @old_hundred;
+	@l_special = @old_special;
     } else {
-	$system = "American";
-	$sep = ",";
-	$point = ".";
+    	# formal Latin room system (using duo)
+	@l_unit = @new_unit;
+	@l_ten = @new_ten;
+	@l_hundred = @new_hundred;
+	@l_special = @new_special;
     }
 
     # get the number
@@ -474,7 +710,6 @@ MAIN:
 	}
 	print $cgi->p, "\n";
 	print "<BLOCKQUOTE><PRE>\n";
-	$preblock = 1;
     }
 
     # catch the case where we only want to enter a power of 10
@@ -489,7 +724,7 @@ MAIN:
        # print the name
        #
        } else {
-	   power_of_ten(\$integer, $system, $bias);
+	   power_of_ten(\$integer, $ruleset, $bias);
        }
 
     # print the number comma/dot separated
@@ -505,7 +740,7 @@ MAIN:
     # otherwise print the first part of the response if allowed
     #
     } else {
-	print_name($neg, \$integer, \$fract, $system, $bias);
+	print_name($neg, \$integer, \$fract, $ruleset, $bias);
     }
 
     # If we are doing CGI/HTML stuff, print the trailer
@@ -998,7 +1233,7 @@ sub print_number($$$$$$$)
 }
 
 
-# latin_root - return the Latin root of a number
+# latin_root - print the Latin root of a number
 #
 # given:
 #	$num	   number to construct
@@ -1161,7 +1396,7 @@ sub latin_root($$)
 }
 
 
-# american_kilo - return the name of power of 1000 under American system
+# american_kilo - print the name of power of 1000 under American system
 #
 # given:
 #	$power	power of 1000
@@ -1199,7 +1434,7 @@ sub american_kilo($)
 }
 
 
-# european_kilo - return the name of power of 1000 under European system
+# european_kilo - print the name of power of 1000 under European system
 #
 # given:
 #	$power	power of 1000
@@ -1268,29 +1503,120 @@ sub european_kilo($)
 }
 
 
+# american_latin_root - print a latin root according to american ruleset
+#
+# given:
+#	$kilo_power			# power of 1000 to process
+#	$biasmillia			# int(bias/3)
+#
+sub american_latin_root($$)
+{
+    my ($kilo_power, $biasmillia) = @_;	# get args
+
+    # print the name based on the American ruleset
+    #
+    print " ";
+    latin_root($kilo_power->bdec(), $biasmillia);
+    print "llion";
+}
+
+
+# european_latin_root - print a latin root according to american ruleset
+#
+# given:
+#	$kilo_power			# power of 1000 to process
+#	$biasmillia			# int(bias/3)
+#
+sub european_latin_root($$)
+{
+    my ($kilo_power, $biasmillia) = @_;	# get args
+    my $mod2;				# $kilo_power mod 2
+
+    # divide $kilo_power by 2 taking into account any $biasmillia
+    #
+    # We must determine if the kilo_power and biasmillia combination
+    # is even or odd.
+    #
+    # Some BigInt implementations issue uninitialized
+    # warnings internal to the BigInt code with the
+    # division and mod below.  We block these bogus warnings.
+    #
+    $^W = 0;
+    if (($kilo_power % 2) == 0) {
+
+	# kilo_power is even so kilo_power,biasmillia is even
+	#
+	$kilo_power->bdiv($two);
+	$mod2 = 0;
+
+    } else {
+
+	# If we have biasmillia, then the kilo_power,biasmillia combination
+	# is even.  We divide by 2 by multiplying by 500 while reducing
+	# biasmillia by one.  This results in an even number.
+	#
+	if ($biasmillia > 0) {
+	    $kilo_power->bmul($five_hundred);
+	    $biasmillia->bdec();
+	    $mod2 = 0;
+
+	# We do not have biasmillia and kilo_power is odd, so we must use
+	# the "lliard" roots
+	#
+	} else {
+	    $kilo_power->bdec();
+	    $kilo_power->bdiv($two);
+	    $mod2 = 1;
+	}
+    }
+    $^W = $warn;
+
+    # Even roots use "llion"
+    #
+    if ($mod2 == 0) {
+	print " ";
+	latin_root($kilo_power, $biasmillia);
+	print "llion";
+
+    # Odd roots use "lliard"
+    #
+    } else {
+	print " ";
+	latin_root($kilo_power, $biasmillia);
+	print "lliard";
+    }
+}
+
+
 # power_of_ten - just print name of a the power of 10
 #
 # given:
-#	\$power	the power of 10 to name print
-#	$system	the number system ('American' or 'European')
-#	$bias	power of 10 bias (as BigInt) during de-sci notation conversion
+#	\$power		the power of 10 to name print
+#	$ruleset	number ruleset: ('american', 'european', etc.)
+#			     (see %ruleset_canonical at the top)
+#	$bias		power of 10 bias (as BigInt) during
+#			     de-sci notation conversion
 #
 sub power_of_ten($$$)
 {
-    my ($power, $system, $bias) = @_;	# get args
-    my $kilo_power;			# power of 1000 to ask about
+    my ($power, $ruleset, $bias) = @_;	# get args
+    my $kilo_power;			# power of 1000 to process
     my $big;				# $power as a BigInt
     my $mod3;				# $big mod 3
-    my $mod2;				# $kilo_power mod 2
     my $biasmod3;			# bias mod 3
     my $biasmillia;			# int(bias/3)
     my $bias_big;			# approx power of 10 ($bias+$big)
+    my $latin_root_func;		# latin root printing function
     my $i;
 
     # firewall
     #
     if ($bias < 0) {
 	err("FATAL: Internal error, bias: $bias < 0 in power_of_ten()");
+    }
+    $latin_root_func = $ruleset_latin_root{$ruleset};
+    if (! defined $latin_root_func) {
+	err("FATAL: Undefined latin_root function for ruleset: $ruleset");
     }
 
     # Convert $$power arg into BigInt format
@@ -1384,71 +1710,10 @@ sub power_of_ten($$$)
     } elsif ($kilo_power == 1 && $biasmillia == 0) {
 	print " thousand";
 
-    # print the name based on the American name system
-    #
-    } elsif ($system eq 'American') {
-
-	print " ";
-	latin_root($kilo_power->bdec(), $biasmillia);
-	print "llion";
-
-    # print the name based on the European name system
+    # print the name based on the American ruleset
     #
     } else {
-
-	# divide $kilo_power by 2 taking into account any $biasmillia
-	#
-	# We must determine if the kilo_power and biasmillia combination
-	# is even or odd.
-	#
-	# Some BigInt implementations issue uninitialized
-	# warnings internal to the BigInt code with the
-	# division and mod below.  We block these bogus warnings.
-	#
-	$^W = 0;
-	if (($kilo_power % 2) == 0) {
-
-	    # kilo_power is even so kilo_power,biasmillia is even
-	    #
-	    $kilo_power->bdiv($two);
-	    $mod2 = 0;
-
-	} else {
-
-	    # If we have biasmillia, then the kilo_power,biasmillia combination
-	    # is even.  We divide by 2 by multiplying by 500 while reducing
-	    # biasmillia by one.  This results in an even number.
-	    #
-	    if ($biasmillia > 0) {
-		$kilo_power->bmul($five_hundred);
-		$biasmillia->bdec();
-		$mod2 = 0;
-
-	    # We do not have biasmillia and kilo_power is odd, so we must use
-	    # the "lliard" roots
-	    #
-	    } else {
-		$kilo_power->bdec();
-		$kilo_power->bdiv($two);
-		$mod2 = 1;
-	    }
-	}
-	$^W = $warn;
-
-	# Even roots use "llion"
-	#
-	if ($mod2 == 0) {
-	    print " ";
-	    latin_root($kilo_power, $biasmillia);
-	    print "llion";
-
-	# Odd roots use "lliard"
-	#
-	} else {
-	    print " ";
-	    latin_root($kilo_power, $biasmillia);
-	    print "lliard";
-	}
+	$latin_root_func->($kilo_power, $biasmillia);
     }
     print "\n";
 }
@@ -1460,13 +1725,14 @@ sub power_of_ten($$$)
 #	$neg		1 => number is negative, 0 => non-negative
 #	\$integer	integer part of the number
 #	\$fract		fractional part of number (or undef)
-#	$system		number system ('American' or 'European')
+#	$ruleset	number ruleset: ('american', 'european', etc.)
+#			     (see %ruleset_canonical at the top)
 #	$bias		power of 10 bias (as BigInt) during de-sci
 #			    notation conversion
 #
 sub print_name($$$$$)
 {
-    my ($neg, $integer, $fract, $system, $bias) = @_;	# get args
+    my ($neg, $integer, $fract, $ruleset, $bias) = @_;	# get args
     my $bias_mod3;	# bias % 3
     my $millia;		# millia arg, power of 1000 for a given set f 3
     my $intstr;		# integer as a string
@@ -1475,7 +1741,20 @@ sub print_name($$$$$)
     my $cnt3;		# current set of 3 index (or partial of highest)
     my $set3;		# set of 3 digits
     my $indx;		# index into integer
+    my $kilo_function;	# reference to a function to print the kilo nam
+    my $point_name;	# the same of the point separator
     my $i;
+
+    # firewall
+    #
+    $kilo_function = $ruleset_kilo{$ruleset};
+    if (! defined($kilo_function)) {
+	err("FATAL: undefined kilo_function for ruleset: $ruleset");
+    }
+    $point_name = $ruleset_point_name{$ruleset};
+    if (! defined($point_name)) {
+	err("FATAL: undefined point name for ruleset: $ruleset");
+    }
 
     # process a leading -, if needed
     #
@@ -1551,18 +1830,10 @@ sub print_name($$$$$)
     print_3($set3);
     print " ";
     --$cnt3;
-    if ($system eq 'American') {
-	if ($bias > 0) {
-	    american_kilo($millia+$cnt3);
-	} else {
-	    american_kilo($cnt3);
-	}
+    if ($bias > 0) {
+	$kilo_function->($millia+$cnt3);
     } else {
-	if ($bias > 0) {
-	    european_kilo($millia+$cnt3);
-	} else {
-	    european_kilo($cnt3);
-	}
+	$kilo_function->($cnt3);
     }
 
     # process all of the the remaining full sets of 3 (if any)
@@ -1579,18 +1850,10 @@ sub print_name($$$$$)
 	print_3($set3);
 	if ($cnt3 > 0 || $bias > 0) {
 	    print " ";
-	    if ($system eq 'American') {
-		if ($bias > 0) {
-		    american_kilo($millia+$cnt3);
-		} else {
-		    american_kilo($cnt3);
-		}
+	    if ($bias > 0) {
+		$kilo_function->($millia+$cnt3);
 	    } else {
-		if ($bias > 0) {
-		    european_kilo($millia+$cnt3);
-		} else {
-		    european_kilo($cnt3);
-		}
+		$kilo_function->($cnt3);
 	    }
 	}
     }
@@ -1606,11 +1869,7 @@ sub print_name($$$$$)
 	if (!$opt_o) {
 	    print "\n";
 	}
-	if ($system eq 'American') {
-	    print "point";
-	} else {
-	    print "comma";
-	}
+	print $point_name;
 	if ($opt_o) {
 	    print " ";
 	} else {
@@ -1755,8 +2014,8 @@ sub cgi_form()
 	"digit" => " Decimal digits if input is just a number"
     );
     my %system_label = (
-	"usa" => " American system",
-	"europe" => " European system"
+	"american" => " American ruleset",
+	"european" => " European ruleset"
     );
     my %millia_label = (
 	"dup" => " milliamillia...",
@@ -1765,6 +2024,10 @@ sub cgi_form()
     my %dash_label = (
 	"nodash" => " without any -'s",
 	"dash" => " with -'s between parts of words"
+    );
+    my %latin_formality = (
+	"formal" => "use duo and octa",
+	"informal" => "use do, du and octo"
     );
 
     print $cgi->header, "\n";
@@ -1805,12 +2068,20 @@ sub cgi_form()
 			  -labels => \%output_label,
 			  -default => 'name'), "\n";
     print $cgi->br, "\n";
-    print "Name system:", "\n";
+    print "Ruleset:", "\n";
     print "&nbsp;" x 4, "\n";
-    print $cgi->radio_group(-name => 'system',
-			  -values => ['usa', 'europe'],
+    print $cgi->radio_group(-name => 'ruleset',
+			  -values => ['american', 'european'],
 			  -labels => \%system_label,
-			  -default => 'usa'), "\n";
+			  -default => 'american'), "\n";
+    # XXX - format Latin form section - XXX
+    print $cgi->br, "\n";
+    print "Latin formality:", "\n";
+    print "&nbsp;" x 8, "\n";
+    print $cgi->radio_group(-name => 'latin_formality',
+			  -values => ['formal', 'informal'],
+			  -labels => \%latin_formality,
+			  -default => 'formal'), "\n";
     print $cgi->br, "\n";
     print "Millia style:", "\n";
     print "&nbsp;" x 8, "\n";
@@ -1860,11 +2131,11 @@ sub cgi_form()
 	$opt_c = 1;		# assume -c (comma/dot decimal)
     }
 
-    # determine the system
+    # determine the ruleset
     #
-    if (defined($cgi->param('system')) &&
-	$cgi->param('system') eq "europe") {
-	$opt_e = 1;		# assume -e (European system)
+    if (defined($cgi->param('ruleset')) &&
+	$cgi->param('ruleset') eq "european") {
+	$opt_r = "european";	# assume -r ruleset (European ruleset)
     }
 
     # determine the millia style
@@ -1878,6 +2149,13 @@ sub cgi_form()
     #
     if (defined($cgi->param('dash')) && $cgi->param('dash') eq "dash") {
 	$opt_d = 1;		# assume -d (use -'s in names)
+    }
+
+    # determine formal vs informal
+    #
+    if (defined($cgi->param('latin_form')) &&
+        $cgi->param('latin_form') eq "informal") {
+	$opt_i = 1;		# assume -i (informal Latin)
     }
 
     # return the number
