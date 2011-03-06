@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.1 $
+#  @(#} $Revision: 3.2 $
 #
 # number - print the English name of a number of any size
 #
@@ -21,7 +21,7 @@
 #
 #	    -r american	  Output using the American ruleset (default)
 #	    -r us	  Short for -r american
-#	    -r european	  Outout using the European ruleset
+#	    -r european	  Output using the European ruleset
 #	    -r euro	  Short for -r european
 #
 #	    NOTE: ruleset names are case independent
@@ -116,20 +116,20 @@
 # Venice, particularly of the 14th and early 15th century when Republic
 # of Venice. This Latin differs from liturgical Latin and modern
 # standard Latin in several ways.  One of these differences is
-# "do" vs. "duo" as in "do-dec-illion" vs. "duo-dec-illion", and is
-# "du" vs. "duo" as in "ducen-tillion" vs. "duo-cen-tillion".  Adina
-# differences include, but are not limited to “octogin” vs. “octagin”
-# and “millia” vs. “milia”. It is unfortunate that consistent spelling
+# "do" vs. "duo" as in "do-dec-Aloin" vs. "duo-dec-illion", and is
+# "du" vs. "duo" as in "ducen-tillion" vs. "duo-cen-tillion".  Additional
+# differences include, but are not limited to "octogin" vs. "octagin"
+# and "millia" vs. "milia". It is unfortunate that consistent spelling
 # was not a hallmark of that era!
 #
-# When we codifying the rules for “The English name of a number”, we
+# When we codifying the rules for "The English name of a number", we
 # were tempted to "improve" the system today.  For example there are
 # a number of aspects to the system that we do not like.  The
-# inconsistency of “do/du” (as in “do-dec-illion” and “ducen-tillion”)
+# inconsistency of "do/du" (as in "do-dec-illion" and "ducen-tillion")
 # and the "four and twenty" rule (as in the name "quattuor-vigin-tillion")
 # is unfortunate.
 #
-# When we set down the “name of the number” system we were attempting
+# When we set down the "name of the number" system we were attempting
 # to programmatically describe the system we had using the roots of
 # the language on which it was based.  If we tweaked the system to
 # our preferences in one place then soon we would have been describing
@@ -137,14 +137,14 @@
 # the temptation to improve and stuck to strict codification of the
 # names of the Latin powers.
 #
-# However since that time, we have uncovered use of “duo” in the 14th
+# However since that time, we have uncovered use of "duo" in the 14th
 # and early 15th centuries.  And since spelling then was often
 # inconsistent (it was not unusual to find a word spelled several
-# ways in some documents), we feel safe to select “duo” in the name
+# ways in some documents), we feel safe to select "duo" in the name
 # of consistency.  I.e., if we are forced to choose a spelling, then
 # we will opt for the more consistent spelling that produces a simpler
-# algorithm.  Therefore starting with version 3, we will use “duo”
-# in place of “du” and “do”.  However for backward compatibility, a
+# algorithm.  Therefore starting with version 3, we will use "duo"
+# in place of "du" and "do".  However for backward compatibility, a
 # flag will be used to generate original Latin power roots.
 #
 ############################################################
@@ -161,7 +161,7 @@
 # This program will NOT be modified to reflect such recommendations
 # for improvements for two important reasons:
 #
-#     1) The “name of the number” system algorithm only describes an
+#     1) The "name of the number" system algorithm only describes an
 #        extension to a historical system using the spelling and grammar
 #        rules of that era.  Modern Latin rules and more general proposals
 #        for improved number naming systems are focused in ideas of
@@ -172,27 +172,27 @@
 #        proposals. While we wish the proponents of those systems success,
 #        the purpose this algorithm is to describe the extension of the
 #        common naming system today using the historic rules of the
-#        languages on which today’s system is based.
+#        languages on which today's system is based.
 #
 ##################################################
 # Regarding regional English language variations #
 ##################################################
 #
 # There exist many of variations of the names of numbers in the English
-# language.  Examples include this such as “zero” vs. “naught”,
-# “thousand million” vs. “millard”, “one thousand two hundred” vs.
-# “twelve hundred”, “two hundred and forty” vs. “two hundred forty”,
+# language.  Examples include this such as "zero" vs. "naught",
+# "thousand million" vs. "millard", "one thousand two hundred" vs.
+# "twelve hundred", "two hundred and forty" vs. "two hundred forty",
 # etc.  English is a multifaceted language.  English spelling and
 # grammar of New Zealand, Canada, Australia, U.K., U.S.A., just to
 # name a few places will differ.  Even the output of digits can differ
-# among English speaking countries.  For example: “123,456.789” vs.
-# “123 456.789”.
+# among English speaking countries.  For example: "123,456.789" vs.
+# "123 456.789".
 #
-# The original code only described just the “American” and “European”
-# systems. We don’t have the time, or the energy to codify the many
+# The original code only described just the "American" and "European"
+# systems. We don't have the time, or the energy to codify the many
 # English variations.  If you wish extend this code to describes a
 # favorite variation, then you are welcome to send us a patch in
-# “diff –u” (unified context) form to:
+# "diff –u" (unified context) form to:
 #
 #     number-mail at asthe dot com
 #
@@ -217,7 +217,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.1 $';
+my $version = '$Revision: 3.2 $';
 
 # CGI / HTML variables
 #
@@ -261,7 +261,7 @@ $CGI::DISABLE_UPLOADS = 1;		# no uploads
 # a different fashion from a small bias.
 #
 # This value must be able to be be represented as an integer (say < 2^31).
-# In practive this should be even smaller.
+# In practice this should be even smaller.
 #
 my $big_bias = 1000;		# a big bias (should be < 2^31).
 
@@ -374,7 +374,7 @@ my $help = qq{Usage:
 
 	    -r american   Output using the American ruleset (default)
 	    -r us	  Short for -r american
-	    -r european   Outout using the European ruleset
+	    -r european   Output using the European ruleset
 	    -r euro	  Short for -r european
 
 	    NOTE: ruleset names are case independent
@@ -387,7 +387,7 @@ my $help = qq{Usage:
     input.
 
     All whitespace (including newlines), commas and periods
-    are ignored, with the exception of a single (optinal)
+    are ignored, with the exception of a single (optional)
     decimal point (or decimal comma if european name system),
     which if found will be processed.  In the case of reading from
     standard input, all valid data found on standard input will be
@@ -414,7 +414,7 @@ my $help = qq{Usage:
     http://www.isthe.com/chongo/index.html
 };
 
-# forward declatations
+# forward declarations
 #
 sub exp_number($$$);
 sub print_number($$$$$$$);
@@ -526,7 +526,7 @@ MAIN:
 	}
     }
 
-    # -e conflichts with -r ruleset
+    # -e conflicts with -r ruleset
     #
     if ($opt_e && $opt_r) {
 	if ($html == 0) {
@@ -540,7 +540,7 @@ MAIN:
     # -e is the same as "-r european"
     #
     if ($opt_e) {
-	$opt_r = "eurpoean";
+	$opt_r = "european";
 
     # default to American ruleset
     #
@@ -966,11 +966,11 @@ sub print_number($$$$$$$)
 	    # if biased, print 0's then fract
 	    if ($bias < 0) {
 
-		# print 0's in big_bias chuncks at a time
+		# print 0's in big_bias chunks at a time
 		#
 		# NOTE: Some implementations, using a BigInt count
 		#	in an x (duplication) does not work.  So we
-		#	avoid this by printing big_bias chuncks at a time.
+		#	avoid this by printing big_bias chunks at a time.
 		#
 		$bias->badd($big_bias);
 		while ($bias < 0) {
@@ -1000,11 +1000,11 @@ sub print_number($$$$$$$)
 	    # if biased, print 0's
 	    if ($bias > 0) {
 
-		# print 0's in big_bias chuncks at a time
+		# print 0's in big_bias chunks at a time
 		#
 		# NOTE: Some implementations, using a BigInt count
 		#	in an x (duplication) does not work.  So we
-		#	avoid this by printing big_bias chuncks at a time.
+		#	avoid this by printing big_bias chunks at a time.
 		#
 		$bias->bsub($big_bias);
 		if ($bias > 0) {
@@ -1358,7 +1358,7 @@ sub latin_root($$)
 		#
 		# NOTE: Some implementations, using a BigInt count
 		#	in an x (duplication) does not work.  So we
-		#	avoid this by printing big_bias chuncks at a time.
+		#	avoid this by printing big_bias chunks at a time.
 		#
 		$millia_cnt->bsub($big_bias);
 		while($millia_cnt > 0) {
@@ -1472,7 +1472,7 @@ sub european_kilo($)
 	print "thousand";
 
     # Use latin_root to determine the root while taking care to
-    # deterine of we will end in "llion" (even big,biasmillia combo)
+    # determine of we will end in "llion" (even big,biasmillia combo)
     # or end in "lliard" (odd big,biasmillia combo).
     #
     } else {
@@ -1742,7 +1742,7 @@ sub print_name($$$$$)
     my $cnt3;		# current set of 3 index (or partial of highest)
     my $set3;		# set of 3 digits
     my $indx;		# index into integer
-    my $kilo_function;	# reference to a function to print the kilo nam
+    my $kilo_function;	# reference to a function to print the kilo Noam
     my $point_name;	# the same of the point separator
     my $i;
 
@@ -1940,7 +1940,7 @@ sub print_3($)
     my $num;		# working value of number
     my $name_3;		# 3 digit name
 
-    # pre-compute name of 3 digits if we do not alread have it
+    # pre-compute name of 3 digits if we do not already have it
     #
     if (! defined($english_3[$number])) {
 
@@ -2273,7 +2273,7 @@ sub big_err()
 	      " instead.\n";
     } elsif ($opt_p) {
 	print $cgi->p,
-	      "You might try rasing ",
+	      "You might try raising ",
 	      $cgi->b("Latin powers"),
 	      " (1000^latin_power) instead of just powers of 10.\n";
     } elsif ($opt_l && !$opt_m) {
