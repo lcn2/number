@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.2 $
+#  @(#} $Revision: 3.3 $
 #
 # number - print the English name of a number of any size
 #
@@ -116,7 +116,7 @@
 # Venice, particularly of the 14th and early 15th century when Republic
 # of Venice. This Latin differs from liturgical Latin and modern
 # standard Latin in several ways.  One of these differences is
-# "do" vs. "duo" as in "do-dec-Aloin" vs. "duo-dec-illion", and is
+# "do" vs. "duo" as in "do-dec-illion" vs. "duo-dec-illion", and is
 # "du" vs. "duo" as in "ducen-tillion" vs. "duo-cen-tillion".  Additional
 # differences include, but are not limited to "octogin" vs. "octagin"
 # and "millia" vs. "milia". It is unfortunate that consistent spelling
@@ -217,7 +217,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.2 $';
+my $version = '$Revision: 3.3 $';
 
 # CGI / HTML variables
 #
