@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.3 $
+#  @(#} $Revision: 3.4 $
 #
 # number - print the English name of a number of any size
 #
@@ -15,7 +15,7 @@
 #	-c	output number in comma/dot form
 #	-o	output number on a single line
 #	-i	Use informal Latin powers (default: use formal)
-#		Use dodec over duodec, ducen over duocen, octogin over octagin
+#		Use dodec over duodec and ducen over duocen
 #
 #	-r ruleset 	Output using ruleset:
 #
@@ -118,9 +118,8 @@
 # standard Latin in several ways.  One of these differences is
 # "do" vs. "duo" as in "do-dec-illion" vs. "duo-dec-illion", and is
 # "du" vs. "duo" as in "ducen-tillion" vs. "duo-cen-tillion".  Additional
-# differences include, but are not limited to "octogin" vs. "octagin"
-# and "millia" vs. "milia". It is unfortunate that consistent spelling
-# was not a hallmark of that era!
+# differences include, but are not limited and "millia" vs. "milia".
+# It is unfortunate that consistent spelling was not a hallmark of that era!
 #
 # When we codifying the rules for "The English name of a number", we
 # were tempted to "improve" the system today.  For example there are
@@ -217,7 +216,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.3 $';
+my $version = '$Revision: 3.4 $';
 
 # CGI / HTML variables
 #
@@ -328,7 +327,7 @@ my @old_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
 #
 my @new_unit = ( "" , qw( un duo tre quattuor quin sex septen octo novem ));
 my @new_ten = ("", qw( dec vigin trigin quadragin quinquagin
-		     sexagin septuagin octagin nonagin ));
+		     sexagin septuagin octogin nonagin ));
 my @new_hundred = ("", qw( cen duocen trecen quadringen quingen
 		         sescen septingen octingen nongen ));
 my @new_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
@@ -368,7 +367,7 @@ my $help = qq{Usage:
 	-c	output number in comma/dot form
 	-o	output number on a single line
 	-i	Use informal Latin powers (default: use formal)
-		Use dodec over duodec, ducen over duocen, octogin over octagin
+		Use dodec over duodec and ducen over duocen
 
 	-r ruleset	Output using ruleset:
 
@@ -2027,8 +2026,8 @@ sub cgi_form()
 	"dash" => " with -'s between parts of words "
     );
     my %latin_formality = (
-	"formal" => " formal duo and octa ",
-	"informal" => " informal do, du and octo "
+	"formal" => " formal use duo ",
+	"informal" => " informal use do and du "
     );
 
     print $cgi->header, "\n";
