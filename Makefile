@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.27 $
-# @(#) $Id: Makefile,v 1.27 2011/03/06 19:14:51 chongo Exp chongo $
+# @(#) $Revision: 1.28 $
+# @(#) $Id: Makefile,v 1.28 2014/02/10 00:31:22 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/bin/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
@@ -32,7 +32,7 @@ TAR= tar
 CHMOD= chmod
 
 # locations
-DESTDIR= /usr/local/bin
+DESTBIN= /usr/local/bin
 SERVERROOT= /web/isthe/chroot
 WWWROOT= ${SERVERROOT}/html
 WWW= ${WWWROOT}/chongo/tech/math/number
@@ -76,7 +76,7 @@ number.tgz: number.pl number.cgi number README.txt
 	chmod 0444 number.tgz
 
 install: all
-	${INSTALL} -m 0555 number ${DESTDIR}
+	${INSTALL} -m 0555 number ${DESTBIN}
 
 clean:
 
