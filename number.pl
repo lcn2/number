@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.6 $
+#  @(#} $Revision: 3.7 $
 #
 # number - print the English name of a number of any size
 #
@@ -216,7 +216,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.6 $';
+my $version = '$Revision: 3.7 $';
 
 # CGI / HTML variables
 #
@@ -927,7 +927,7 @@ sub print_number($$$$$$$)
 	my $fulllen;	# approximate length of the input as BigInt
 
 	# $fulllen = abs($bias) + $fractlen + int($intlen*4/3)
-	$fulllen = $bias->copy();
+	$fulllen = $bias;
 	$fulllen->babs();
 	$fulllen->badd($fractlen);
 	$fulllen->badd(int($intlen*4/3));
@@ -1052,6 +1052,7 @@ sub print_number($$$$$$$)
 	    # account for - sign
 	    $leadlen->binc();
 	}
+
 
 	# print enough the leading whitespace so that the
 	# decimal point/comma will line up at the end of a line
