@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.4 $
+#  @(#} $Revision: 3.5 $
 #
 # number - print the English name of a number of any size
 #
@@ -216,7 +216,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.4 $';
+my $version = '$Revision: 3.5 $';
 
 # CGI / HTML variables
 #
@@ -663,7 +663,7 @@ MAIN:
     # We did not have a number in scientific notation so we have no bias
     #
     } else {
-	$bias = Math::BigInt->bzero();
+	$bias = Math::BigInt->new("0");
     }
 
     # verify that we have a valid number
@@ -805,7 +805,7 @@ sub exp_number($$$)
     # If we have a 0 exponent, just return the lead with a zero bias
     #
     if ($exp == 0) {
-	$$bias = Math::BigInt->bzero();
+	$$bias = Math::BigInt->new("0");
 	return $lead;
     }
 
@@ -840,7 +840,7 @@ sub exp_number($$$)
 	    # we use $expstr because we know that it is a small value
 	    $int .= substr($frac, 0, $expstr);
 	    $frac = substr($frac, $expstr);
-	    $$bias = Math::BigInt->bzero();
+	    $$bias = Math::BigInt->new("0");
 	}
 
     # If we need to move the decimal point/comma to the left, then
@@ -869,7 +869,7 @@ sub exp_number($$$)
 	    # we use $expstr because we know that it is a small value
 	    $frac = substr($int, $expstr) . $frac;
 	    $int = substr($int, 0, length($int)+$expstr);
-	    $$bias = Math::BigInt->bzero();
+	    $$bias = Math::BigInt->new("0");
 	}
     }
 
@@ -1293,7 +1293,7 @@ sub latin_root($$)
     # We have to be careful about how we compute $millia+len-1
     # so that it will not become a floating value.
     #
-    $millia_cnt = $millia->copy();
+    $millia_cnt = Math::BigInt->new($millia);
     $millia_cnt->badd($len);
 
     # process each set of 3 digits up to but not
@@ -1346,7 +1346,7 @@ sub latin_root($$)
 
 		# print millia's with ^number (-m) notation
 		#
-		if ($millia_cnt->bcmp(1) > 0) {		# if $millia_cnt > 1
+		if ($millia_cnt > 1) {
 		    print "millia^", $millia_cnt->bstr(), $dash;
 		} else {
 		    print "millia", $dash;
@@ -1427,8 +1427,8 @@ sub american_kilo($)
     # Otherwise we use the Latin root process to construct the value.
     #
     } else {
-	$big = Math::BigInt->new($power);
-	latin_root($big->bdec(), Math::BigInt->bzero());
+	$big = $power - 1;
+	latin_root($big, Math::BigInt->new("0"));
 	print "llion";
     }
 }
@@ -1490,13 +1490,13 @@ sub european_kilo($)
 	# Even roots use "llion"
 	#
 	if ($mod2 == 0) {
-	    latin_root($big, Math::BigInt->bzero());
+	    latin_root($big, Math::BigInt->new("0"));
 	    print "llion";
 
 	# Odd roots use "lliard"
 	#
 	} else {
-	    latin_root($big, Math::BigInt->bzero());
+	    latin_root($big, Math::BigInt->new("0"));
 	    print "lliard";
 	}
     }
@@ -1516,7 +1516,8 @@ sub american_latin_root($$)
     # print the name based on the American ruleset
     #
     print " ";
-    latin_root($kilo_power->bdec(), $biasmillia);
+    $kilo_power = $kilo_power - 1;
+    latin_root($kilo_power, $biasmillia);
     print "llion";
 }
 
@@ -1546,7 +1547,7 @@ sub european_latin_root($$)
 
 	# kilo_power is even so kilo_power,biasmillia is even
 	#
-	$kilo_power->bdiv($two);
+	$kilo_power = $kilo_power / 2;
 	$mod2 = 0;
 
     } else {
@@ -1653,7 +1654,7 @@ sub power_of_ten($$$)
 
 	# under -l, we deal with powers of 1000 above 1000
 	#
-	$kilo_power = $big->copy();
+	$kilo_power = Math::BigInt->new($big);
 
 	# under -l, our multiplier name is always one
 	#
@@ -1685,7 +1686,7 @@ sub power_of_ten($$$)
 	$^W = 0;
 	($kilo_power, $mod3) = $big->bdiv(3);
 	$^W = $warn;
-	$biasmillia = Math::BigInt->bzero();
+	$biasmillia = Math::BigInt->new("0");
 
 	# print the multiplier name
 	#
@@ -1701,7 +1702,7 @@ sub power_of_ten($$$)
     # A zero kilo_power means that we only have 1, 10 or 100
     # and so there is nothing else to print.
     #
-    if ($kilo_power->bcmp(1) < 0 && $biasmillia == 0) {
+    if ($kilo_power < 1 && $biasmillia == 0) {
 	# nothing else to print
 
     # We must treat a kilo_power of 1 as a special case
@@ -1880,21 +1881,21 @@ sub print_name($$$$$)
 	# if biased, print off leading zero's
 	#
 	while ($bias < 0) {
-	    my $zero = $digits[0];		# zero digit
-	    my $diglen = length($zero)+1;	# length of zero name + space
+	    my $zero_digit = $digits[0];		# zero digit
+	    my $diglen = length($zero_digit)+1;	# length of zero name + space
 
 	    $bias->binc();
 	    if ($opt_o) {
-		print " $zero";
+		print " $zero_digit";
 	    } else {
 		if ($len <= 0) {
-		    print $zero;
+		    print $zero_digit;
 		    $len = $diglen - 1;
 		} elsif ($len + $diglen < 80) {
-		    print " $zero";
+		    print " $zero_digit";
 		    $len += $diglen;
 		} else {
-		    print "\n$zero";
+		    print "\n$zero_digit";
 		    $len = $diglen - 1;
 		}
 	    }
