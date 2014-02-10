@@ -2,9 +2,9 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.26 $
-# @(#) $Id: Makefile,v 1.26 2006/09/17 23:41:08 chongo Exp chongo $
-# @(#) $Source: /usr/local/src/cmd/number/RCS/Makefile,v $
+# @(#) $Revision: 1.27 $
+# @(#) $Id: Makefile,v 1.27 2011/03/06 19:14:51 chongo Exp chongo $
+# @(#) $Source: /usr/local/src/bin/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
 #
@@ -52,6 +52,12 @@ ALT_GROUP= wwwadmin
 # what to build
 TARGETS= number.cgi number number.tgz
 
+# remote operations
+#
+THISDIR= number
+RSRCPSH= rsrcpush
+RMAKE= rmake
+
 all: ${TARGETS}
 
 number.cgi: number.pl
@@ -71,20 +77,33 @@ number.tgz: number.pl number.cgi number README.txt
 
 install: all
 	${INSTALL} -m 0555 number ${DESTDIR}
-	-@if [ -d ${WWW} ]; then \
-	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0555 number ${WWW}"; \
-	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0555 number ${WWW}; \
-	fi
-	-@if [ -d ${WWWSRC} ]; then \
-	    echo "	${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWWSRC}"; \
-	    ${INSTALL} -o ${ALT_USER} -g ${ALT_GROUP} -m 0444 number.tgz ${WWWSRC}; \
-	fi
-	-@if [ -d ${CGIBIN} ]; then \
-	    echo "	${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}"; \
-	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGIBIN}; \
-	fi
 
 clean:
 
 clobber: clean
 	rm -f ${TARGETS}
+
+# push source to remote sites
+#
+pushsrc:
+	${RSRCPSH} -v -x . ${THISDIR}
+
+pushsrcq:
+	@${RSRCPSH} -q . ${THISDIR}
+
+pushsrcn:
+	${RSRCPSH} -v -x -n . ${THISDIR}
+
+# run make on remote hosts
+#
+rmtall:
+	${RMAKE} -v ${THISDIR} all
+
+rmtinstall:
+	${RMAKE} -v ${THISDIR} install
+
+rmtclean:
+	${RMAKE} -v ${THISDIR} clean
+
+rmtclobber:
+	${RMAKE} -v ${THISDIR} clobber
