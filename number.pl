@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.5 $
+#  @(#} $Revision: 3.6 $
 #
 # number - print the English name of a number of any size
 #
@@ -216,7 +216,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.5 $';
+my $version = '$Revision: 3.6 $';
 
 # CGI / HTML variables
 #
@@ -1030,7 +1030,7 @@ sub print_number($$$$$$$)
 	if ($bias > 0) {
 	    $wholelen += $bias;
 	}
-	$leadlen = $wholelen->copy();
+	$leadlen = Math::BigInt->new($wholelen);
 	if ($wholelen->bcmp(3) > 0) {	# if >3
 	    my $tmp;
 
@@ -1042,8 +1042,7 @@ sub print_number($$$$$$$)
 	    #
 	    # $leadlen += ($wholelen-1)/3;
 	    #
-	    $tmp = $wholelen->copy();
-	    $tmp->bdec();
+	    $tmp = $wholelen - 1;
 	    $^W = 0;
 	    $tmp->bdiv($three);
 	    $^W = $warn;
