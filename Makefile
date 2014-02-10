@@ -2,11 +2,11 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.28 $
-# @(#) $Id: Makefile,v 1.28 2014/02/10 00:31:22 chongo Exp chongo $
+# @(#) $Revision: 1.29 $
+# @(#) $Id: Makefile,v 1.29 2014/02/10 00:37:59 chongo Exp chongo $
 # @(#) $Source: /usr/local/src/bin/number/RCS/Makefile,v $
 #
-# Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1999-2014 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -33,21 +33,6 @@ CHMOD= chmod
 
 # locations
 DESTBIN= /usr/local/bin
-SERVERROOT= /web/isthe/chroot
-WWWROOT= ${SERVERROOT}/html
-WWW= ${WWWROOT}/chongo/tech/math/number
-CGIBIN= /var/www/cgi-bin/www.isthe.com
-WWWSRC= ${WWWROOT}/chongo/src/number
-
-# who must own cgi scripts so that apache suexec will run them
-#
-CGI_USER= cgi
-CGI_GROUP= cgi
-
-# non-CGI stuff that must not be accessed by suexec
-#
-ALT_USER= chongo
-ALT_GROUP= wwwadmin
 
 # what to build
 TARGETS= number.cgi number number.tgz
