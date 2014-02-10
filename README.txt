@@ -16,7 +16,7 @@ For help try:
 
 When number is run with a .cgi filename extension, it runs as this CGI script:
 
-    http://www.isthe.com/cgi-bin/number.cgi
+    http://www.isthe.com/cgibin/number.cgi
 
 The CGI script limits post to ~2048 characters. The command line
 interface does not have this size limitation.
