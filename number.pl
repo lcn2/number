@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.7 $
+#  @(#} $Revision: 3.5 $
 #
 # number - print the English name of a number of any size
 #
 # usage:
 #	number [-p] [-l] [-d] [-m] [-c] [-o] [-i]
-#	       [-r ruleset | -e] [-h] [[--] number]
+#	       [-r ruleset] [-h] [[--] number]
 #
 #	-p	input is a power of 10
 #	-l	input is a Latin power (1000^x)
@@ -25,8 +25,6 @@
 #	    -r euro	  Short for -r european
 #
 #	    NOTE: ruleset names are case independent
-#
-#	-e	Same as "-r european", kept for backward compatibility
 #
 #	-h	print a help message only
 #
@@ -212,11 +210,11 @@ use strict;
 use bytes;
 use Math::BigInt;
 use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
-	    $opt_r $opt_e $opt_h);
+	    $opt_r $opt_h);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.7 $';
+my $version = '$Revision: 3.5 $';
 
 # CGI / HTML variables
 #
@@ -466,7 +464,6 @@ MAIN:
     $opt_o = 0;
     $opt_i = 0;
     $opt_r = undef;
-    $opt_e = 0;
     $opt_h = 0;
 
     # determine if we are CGI based
@@ -525,25 +522,9 @@ MAIN:
 	}
     }
 
-    # -e conflicts with -r ruleset
-    #
-    if ($opt_e && $opt_r) {
-	if ($html == 0) {
-	    err("-e conflicts with -r ruleset");
-	} else {
-	    err("Do not specify both <B>-e</B> and <B>-r ruleset</B>.\n " .
-	        "Use just <B>-r european</B> instead.");
-	}
-    }
-
-    # -e is the same as "-r european"
-    #
-    if ($opt_e) {
-	$opt_r = "european";
-
     # default to American ruleset
     #
-    } elsif (! defined $opt_r) {
+    if (! defined $opt_r) {
 	$opt_r = "american";
     }
 
@@ -893,18 +874,19 @@ sub exp_number($$$)
 #	$point		decimal point/comma
 #	\$fract		fractional part of number (or undef)
 #	$linelen	max line length (0 => no limit)
-#	$bias		power of 10 bias (as BigInt) during de-sci
-#			    notation conversion
+#	$bias		power of 10 bias during de-sci notation conversion
 #
 sub print_number($$$$$$$)
 {
     # get args
-    my ($sep, $neg, $integer, $point, $fract, $linelen, $bias) = @_;
+    my ($sep, $neg, $integer, $point, $fract, $linelen, $bias_arg) = @_;
     my $wholelen;	# length of the integer part as modified by bias
     my $intlen;		# length of the integer part without bias
     my $fractlen;	# length of the fractional part
     my $leadlen;	# length of digits, separators and - on 1st line
     my $col;		# current output column, first col is 1
+    my $bias = Math::BigInt->new($bias_arg);	# power of 10 bias
+    my $bias_str;				# $bias as a string
     my $i;
 
     # deal with the zero special case
@@ -927,7 +909,7 @@ sub print_number($$$$$$$)
 	my $fulllen;	# approximate length of the input as BigInt
 
 	# $fulllen = abs($bias) + $fractlen + int($intlen*4/3)
-	$fulllen = $bias;
+	$fulllen = $bias->copy();
 	$fulllen->babs();
 	$fulllen->badd($fractlen);
 	$fulllen->badd(int($intlen*4/3));
@@ -978,9 +960,8 @@ sub print_number($$$$$$$)
 		}
 		$bias->bsub($big_bias);
 		if ($bias != 0) {
-		    my $tmp;
-		    $tmp = $bias->bstr();
-		    print "0" x -$tmp;
+		    ($bias_str = $bias) =~ s/[^\d]//g;
+		    print "0" x -$bias_str;
 		}
 	    }
 
@@ -1012,9 +993,7 @@ sub print_number($$$$$$$)
 		}
 		$bias->badd($big_bias);
 		if ($bias != 0) {
-		    my $tmp;
-		    $tmp = $bias->bstr();
-		    print "0" x $tmp;
+		    print "0" x $bias;
 		}
 	    }
 	}
@@ -1030,7 +1009,7 @@ sub print_number($$$$$$$)
 	if ($bias > 0) {
 	    $wholelen += $bias;
 	}
-	$leadlen = Math::BigInt->new($wholelen);
+	$leadlen = $wholelen->copy();
 	if ($wholelen->bcmp(3) > 0) {	# if >3
 	    my $tmp;
 
@@ -1050,9 +1029,8 @@ sub print_number($$$$$$$)
 	}
 	if ($neg) {
 	    # account for - sign
-	    $leadlen->binc();
+	    $leadlen = $leadlen + 1;
 	}
-
 
 	# print enough the leading whitespace so that the
 	# decimal point/comma will line up at the end of a line
@@ -1247,7 +1225,7 @@ sub print_number($$$$$$$)
 #
 sub latin_root($$)
 {
-    my ($num, $millia) = @_;	# get args
+    my ($num, $millia_arg) = @_;	# get args
     my $numstr;	# $num as a string
     my @set3;	# set of 3 digits, $set3[0] is the most significant
     my $d3;	# 3rd digit in a set of 3
@@ -1257,7 +1235,9 @@ sub latin_root($$)
     my $l2;	# latin name for 2nd digit in a set of 3
     my $l1;	# latin name for 1st digit in a set of 3
     my $len;	# number of sets of 3 including the final (perhaps partial) 3
+    my $millia = Math::BigInt->new($millia_arg);
     my $millia_cnt;		# number of millia's to print
+    my $millia_cnt_str;		# $millia_cnt as string
     my $i;
 
     # firewall
@@ -1293,8 +1273,7 @@ sub latin_root($$)
     # We have to be careful about how we compute $millia+len-1
     # so that it will not become a floating value.
     #
-    $millia_cnt = Math::BigInt->new($millia);
-    $millia_cnt->badd($len);
+    $millia_cnt = $millia + $len;
 
     # process each set of 3 digits up to but not
     # including the last set of 3
@@ -1304,7 +1283,7 @@ sub latin_root($$)
 	# keep track of the number of millia's we might print
 	#
 	if ($millia_cnt > 0) {
-	    $millia_cnt->bdec();
+	    $millia_cnt = $millia_cnt - 1;
 	}
 
 	# do nothing if 000
@@ -1347,7 +1326,8 @@ sub latin_root($$)
 		# print millia's with ^number (-m) notation
 		#
 		if ($millia_cnt > 1) {
-		    print "millia^", $millia_cnt->bstr(), $dash;
+		    ($millia_cnt_str = $millia_cnt) =~ s/[^\d]//g;
+		    print "millia^", $millia_cnt_str, $dash;
 		} else {
 		    print "millia", $dash;
 		}
@@ -1359,16 +1339,14 @@ sub latin_root($$)
 		#	in an x (duplication) does not work.  So we
 		#	avoid this by printing big_bias chunks at a time.
 		#
-		$millia_cnt->bsub($big_bias);
+		$millia_cnt = $millia_cnt - $big_bias;
 		while($millia_cnt > 0) {
 		    print "millia$dash" x $big_bias;
-		    $millia_cnt->bsub($big_bias);
+		    $millia_cnt = $millia_cnt - $big_bias;
 		}
-		$millia_cnt->badd($big_bias);
+		$millia_cnt = $millia_cnt + $big_bias;
 		if ($millia_cnt != 0) {
-		    my $tmp;
-		    $tmp = $millia_cnt->bstr();
-		    print "millia$dash" x $tmp;
+		    print "millia$dash" x $millia_cnt;
 		}
 
 	    }
@@ -1407,6 +1385,7 @@ sub american_kilo($)
 {
     my $power = $_[0];	# get arg
     my $big;		# $power as a BigInt
+    my $zero;		# 0
 
     # firewall
     #
@@ -1427,8 +1406,9 @@ sub american_kilo($)
     # Otherwise we use the Latin root process to construct the value.
     #
     } else {
-	$big = $power - 1;
-	latin_root($big, Math::BigInt->new("0"));
+	$big = Math::BigInt->new($power) - 1;
+	$zero = Math::BigInt->new("0");
+	latin_root($big, $zero);
 	print "llion";
     }
 }
@@ -1453,6 +1433,7 @@ sub european_kilo($)
     my $power = $_[0];		# get arg
     my $mod2;			# $power mod 2
     my $big;			# $power as a BigInt
+    my $zero;			# 0
 
     # firewall
     #
@@ -1486,17 +1467,18 @@ sub european_kilo($)
 	$^W = 0;
 	($big, $mod2) = $big->bdiv($two);
 	$^W = $warn;
+	$zero = Math::BigInt->new("0");
 
 	# Even roots use "llion"
 	#
 	if ($mod2 == 0) {
-	    latin_root($big, Math::BigInt->new("0"));
+	    latin_root($big, $zero);
 	    print "llion";
 
 	# Odd roots use "lliard"
 	#
 	} else {
-	    latin_root($big, Math::BigInt->new("0"));
+	    latin_root($big, $zero);
 	    print "lliard";
 	}
     }
@@ -1511,7 +1493,8 @@ sub european_kilo($)
 #
 sub american_latin_root($$)
 {
-    my ($kilo_power, $biasmillia) = @_;	# get args
+    my ($kilo_power_arg, $biasmillia) = @_;	# get args
+    my $kilo_power = Math::BigInt->new($kilo_power_arg);
 
     # print the name based on the American ruleset
     #
@@ -1547,7 +1530,7 @@ sub european_latin_root($$)
 
 	# kilo_power is even so kilo_power,biasmillia is even
 	#
-	$kilo_power = $kilo_power / 2;
+	$kilo_power->bdiv($two);
 	$mod2 = 0;
 
     } else {
@@ -1558,14 +1541,14 @@ sub european_latin_root($$)
 	#
 	if ($biasmillia > 0) {
 	    $kilo_power->bmul($five_hundred);
-	    $biasmillia->bdec();
+	    $biasmillia = $biasmillia - 1;
 	    $mod2 = 0;
 
 	# We do not have biasmillia and kilo_power is odd, so we must use
 	# the "lliard" roots
 	#
 	} else {
-	    $kilo_power->bdec();
+	    $kilo_power = $kilo_power - 1;
 	    $kilo_power->bdiv($two);
 	    $mod2 = 1;
 	}
@@ -1595,12 +1578,11 @@ sub european_latin_root($$)
 #	\$power		the power of 10 to name print
 #	$ruleset	number ruleset: ('american', 'european', etc.)
 #			     (see %ruleset_canonical at the top)
-#	$bias		power of 10 bias (as BigInt) during
-#			     de-sci notation conversion
+#	$bias		power of 10 bias during de-sci notation conversion
 #
 sub power_of_ten($$$)
 {
-    my ($power, $ruleset, $bias) = @_;	# get args
+    my ($power, $ruleset, $bias_arg) = @_;	# get args
     my $kilo_power;			# power of 1000 to process
     my $big;				# $power as a BigInt
     my $mod3;				# $big mod 3
@@ -1608,6 +1590,7 @@ sub power_of_ten($$$)
     my $biasmillia;			# int(bias/3)
     my $bias_big;			# approx power of 10 ($bias+$big)
     my $latin_root_func;		# latin root printing function
+    my $bias = Math::BigInt->new($bias_arg);	# power of 10 bias
     my $i;
 
     # firewall
@@ -1881,21 +1864,21 @@ sub print_name($$$$$)
 	# if biased, print off leading zero's
 	#
 	while ($bias < 0) {
-	    my $zero_digit = $digits[0];		# zero digit
-	    my $diglen = length($zero_digit)+1;	# length of zero name + space
+	    my $z_digit = $digits[0];		# zero digit
+	    my $diglen = length($z_digit)+1;	# length of zero name + space
 
-	    $bias->binc();
+	    $bias = $bias + 1;
 	    if ($opt_o) {
-		print " $zero_digit";
+		print " $z_digit";
 	    } else {
 		if ($len <= 0) {
-		    print $zero_digit;
+		    print $z_digit;
 		    $len = $diglen - 1;
 		} elsif ($len + $diglen < 80) {
-		    print " $zero_digit";
+		    print " $z_digit";
 		    $len += $diglen;
 		} else {
-		    print "\n$zero_digit";
+		    print "\n$z_digit";
 		    $len = $diglen - 1;
 		}
 	    }
