@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.30 $
-# @(#) $Id: Makefile,v 1.30 2014/02/10 01:33:10 chongo Exp root $
+# @(#) $Revision: 1.31 $
+# @(#) $Id: Makefile,v 1.31 2014/03/15 23:45:49 root Exp root $
 # @(#) $Source: /usr/local/src/bin/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999-2014 by Landon Curt Noll.  All Rights Reserved.
@@ -76,12 +76,13 @@ help:
 	@echo make clobber
 	@echo
 	@echo make pushsrc
-	@echo make pushsrcq
 	@echo make pushsrcn
 	@echo
 	@echo make rmtall
 	@echo make rmtinstall
 	@echo make rmtclobber
+	@echo
+	@echo make univ
 
 # push source to remote sites
 #
@@ -107,3 +108,7 @@ rmtclean:
 
 rmtclobber:
 	${RMAKE} -v ${THISDIR} clobber
+
+# build, install, and cleanup everywhere
+#
+univ: all install clobber pushsrc rmtall rmtinstall rmtclobber
