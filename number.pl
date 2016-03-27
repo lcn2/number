@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
 #!/usr/bin/perl -wT
-#  @(#} $Revision: 3.5 $
+#  @(#} $Revision: 3.9 $
 #
 # number - print the English name of a number of any size
 #
 # usage:
 #	number [-p] [-l] [-d] [-m] [-c] [-o] [-i]
-#	       [-r ruleset] [-h] [[--] number]
+#	       [-r ruleset | -e] [-h] [[--] number]
 #
 #	-p	input is a power of 10
 #	-l	input is a Latin power (1000^x)
@@ -17,7 +17,7 @@
 #	-i	Use informal Latin powers (default: use formal)
 #		Use dodec over duodec and ducen over duocen
 #
-#	-r ruleset 	Output using ruleset:
+#	-r ruleset	Output using ruleset: (conflicts with -e)
 #
 #	    -r american	  Output using the American ruleset (default)
 #	    -r us	  Short for -r american
@@ -25,6 +25,8 @@
 #	    -r euro	  Short for -r european
 #
 #	    NOTE: ruleset names are case independent
+#
+#	-e	Short for -r european (conflicts with -r ruleset)
 #
 #	-h	print a help message only
 #
@@ -57,7 +59,7 @@
 #
 ####
 #
-# Copyright (c) 1998-2011 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2011,2016 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -99,6 +101,18 @@
 #
 ####
 
+####
+# HELP WANTED:
+#
+# This code uses the CGI.pm perl module, which is no longer actively
+# maintained.  If you want to help convert this code away from using
+# the CGI.pm perl module and instead using a CGI-like module that is
+# actucally maintained AND is part of core perl, please convert this
+# code and send it to:
+#
+# 	number-mail at asthe dot com
+#
+####
 
 ####
 #
@@ -210,13 +224,30 @@ use strict;
 use bytes;
 use Math::BigInt;
 use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
-	    $opt_r $opt_h);
+	    $opt_r $opt_h $opt_e);
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.5 $';
+my $version = '$Revision: 3.9 $';
 
 # CGI / HTML variables
+#
+# NOTE: This code uses CGI.pm, which while not part of core perl,
+# 	may be installed via the command:
+#
+#	    cpanm CGI
+#
+#	See:
+#
+#	      	http://search.cpan.org/perldoc?cpanm
+#
+# NOTE: RHEL (and systems that use yum) users may install cpanm via:
+#
+# 	yum install perl-App-cpanminus
+#
+# NOTE: See above in the "HELP WANTED" section for a request
+# 	to convert this code to something that uses a better CGI
+# 	perl module that is maintained and is part of core perl.
 #
 my $html = 0;		# 1 ==> be are being invoked as a CGI script
 my $cgi = 0;		# CGI object, if invoked as a CGI script
@@ -231,7 +262,7 @@ if ($0 =~ /\.cgi$/) {
 my %optctl = (
     "p" => \$opt_p, "l" => \$opt_l, "d" => \$opt_d, "m" => \$opt_m,
     "c" => \$opt_c, "o" => \$opt_o, "i" => \$opt_i, "r=s" => \$opt_r,
-    "h" => \$opt_h,
+    "h" => \$opt_h, "e" => \$opt_e
 );
 
 # Warning state
@@ -367,7 +398,7 @@ my $help = qq{Usage:
 	-i	Use informal Latin powers (default: use formal)
 		Use dodec over duodec and ducen over duocen
 
-	-r ruleset	Output using ruleset:
+	-r ruleset	Output using ruleset: (conflicts with -e)
 
 	    -r american   Output using the American ruleset (default)
 	    -r us	  Short for -r american
@@ -375,6 +406,8 @@ my $help = qq{Usage:
 	    -r euro	  Short for -r european
 
 	    NOTE: ruleset names are case independent
+
+	-e	Short for -r european (conflicts with -r ruleset)
 
 	-h	print a help message only
 
@@ -465,6 +498,7 @@ MAIN:
     $opt_i = 0;
     $opt_r = undef;
     $opt_h = 0;
+    $opt_e = undef;
 
     # determine if we are CGI based
     #
@@ -520,6 +554,18 @@ MAIN:
 	    err("You may only print decimal digits when the <I>Type of " .
 	        "input</I>\nis <B>just a number</B>.");
 	}
+    }
+
+    # -e conflicts with -r ruleset
+    #
+    if (defined $opt_r && defined $opt_e) {
+	err("-e conflicts with -r ruleset");
+    }
+
+    # -e implies -r european
+    #
+    if (defined $opt_e) {
+	$opt_r = "european";
     }
 
     # default to American ruleset

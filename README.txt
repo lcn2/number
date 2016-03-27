@@ -25,3 +25,30 @@ For more information see:
 
     http://www.isthe.com/number.html
     http://www.isthe.com/chongo/tech/math/number/example.html
+
+NOTE: The cgi script uses the perl CGI.pm module.  While it is
+      no longer part of the perl core, it still can installed
+      via the command:
+
+	cpanm CGI
+
+      For info on cpanm see:
+
+      	http://search.cpan.org/perldoc?cpanm
+
+    NOTE: RHEL (and systems that use yum) users may install cpanm via:
+
+ 	yum install perl-App-cpanminus
+
+####
+# HELP WANTED:
+#
+# This code uses the CGI.pm perl module, which is no longer actively
+# maintained.  If you want to help convert this code away from using
+# the CGI.pm perl module and instead using a CGI-like module that is
+# actucally maintained AND is part of core perl, please convert this
+# code and send it to:
+#
+# 	number-mail at asthe dot com
+#
+####
