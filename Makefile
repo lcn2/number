@@ -2,8 +2,8 @@
 #
 # number - number makefile
 #
-# @(#) $Revision: 1.31 $
-# @(#) $Id: Makefile,v 1.31 2014/03/15 23:45:49 root Exp root $
+# @(#) $Revision: 1.32 $
+# @(#) $Id: Makefile,v 1.32 2014/03/15 23:59:57 root Exp $
 # @(#) $Source: /usr/local/src/bin/number/RCS/Makefile,v $
 #
 # Copyright (c) 1999-2014 by Landon Curt Noll.  All Rights Reserved.

@@ -1,6 +1,0 @@
-Tools that make source available on the web (or via other public access
-methods) should skip all files and sub-directories in the directory in
-which this file is found.
-
-The Makefile will export calc releases.  The contents of this
-directory should not directly be exported to the web.

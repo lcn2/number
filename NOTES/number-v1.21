@@ -1,0 +1,1386 @@
+#!/usr/bin/perl -T
+#!/usr/bin/perl -wT
+#  @(#} $Revision: 1.21 $
+#  @(#} RCS control in //prime.csd.sgi.com/usr/local/ns-home/cgi-bin/number.cgi
+#
+# number - print the English name of a number in non-HTML form
+#
+# usage:
+#	number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]
+#
+#	-p	input is a power of 10
+#	-L	input is a Latin power of 1000
+#	-d	add dashes to help with pronunciation
+#	-m	output name in a more compact exponentation form
+#	-c	output number in comma/dot form
+#	-l	output number on a single line
+#	-e	use European instead of American name system
+#	-h	print a help message only
+#
+# If number is omitted, then it is read from standard input.
+#
+# Be sure to see:
+#
+#	http://reality.sgi.com/chongo/number
+#
+# for the latest version of thsi code, as well as for a CGI demo program.
+#
+# Copyright (c) 1999 by Landon Curt Noll.  All Rights Reserved.
+#
+# Permission to use, copy, modify, and distribute this software and
+# its documentation for any purpose and without fee is hereby granted,
+# provided that the above copyright, this permission notice and text
+# this comment, and the disclaimer below appear in all of the following:
+#
+#	supporting documentation
+#	source copies
+#	source works derived from this source
+#	binaries derived from this source or from derived source
+#
+# LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
+# INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
+# EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
+# USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+# OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+#
+# With many thanks for Latin suggestions from:
+#
+#			Jeff Drummond
+#			jjd@sgi.com
+#
+# Comments, suggestions, bug fixes and questions about these routines
+# are welcome.  Send EMail to the address given below.
+#
+# Happy bit twiddling,
+#
+#			Landon Curt Noll
+#
+#			{chongo,noll}@{toad,sgi}.com
+#			http://reality.sgi.com/chongo
+#
+# chongo was here	/\../\
+#
+
+# requirements
+#
+use strict;
+use Math::BigInt;
+use vars qw($opt_p $opt_L $opt_d $opt_m $opt_c $opt_l $opt_e $opt_h);
+use Getopt::Std;
+# CGI requirements
+use CGI qw(:standard);
+
+# version
+my $version = '$Revision: 1.21 $';
+
+# Warning state
+my $warn = $^W;
+
+# We setup this arbitrary limit so that people to not enter
+# very large numbers and drive that server crazy.  The algoritm
+# used has no limit so we pick an arbitrary limit.
+#
+# This digit count is not exact, but serves as a limiter on
+# the length of input as well as the exponent allowed in E notation.
+#
+my $too_big = "5000";   # too many digits for the web
+
+# To help pronounce values we put $dash between word parts
+#
+my $dash = "";
+
+# Latin root tables
+#
+my @l_unit = ( "" , qw( un do tre quattuor quin sex septen octo novem ));
+my @l_ten = ("", qw( dec vigin trigin quadragin quinquagin
+		     sexagin septuagin octogin nonagin ));
+my @l_hundred = ("", qw( cen ducen trecen quadringen quingen
+		         sescen septingen octingen nongen ));
+my @l_special = ("", qw( mi bi tri quadri quinti sexti septi octi noni ));
+
+# English names - names from 0 thru 999
+#
+# The english_3 array gets loaded by the print_3() function as
+# names of 3 digit values are computed.  Values previously computed
+# will be returned by table lookup.
+#
+my @english_3;
+my @digit = qw(zero one two three four five six seven eight nine);
+my @ten = qw(zero ten twenty thirty forty
+	     fifty sixty seventy eighty ninety);
+my @twenty = qw(ten eleven twelve thirteen fourteen
+		fifteen sixteen seventeen eighteen nineteen);
+
+# CGI / HTML variables
+#
+my $html = 0;		# 1 => be are being invoked as a CGI script
+my $cgi = 0;		# CGI object, if invoked as a CGI script
+
+# usage and help
+#
+my $usage = "number [-p] [-L] [-d] [-m] [-c] [-l] [-e] [-h] [number]";
+my $help = qq{Usage:
+
+    $0 $usage
+
+	-p	input is a power of 10
+	-L	input is a Latin power of 1000
+	-d	add dashes to help with pronunciation
+	-m	output name in a more compact exponentation form
+	-c	output number in comma/dot form
+	-l	output number on a single line
+	-e	use European instead of American name system
+	-h	print a help message only
+
+    If number is not given on the command line it is read from standard
+    input.
+
+    All whitespace (including newlines), commas and periods
+    are ignored, with the exceptiion of a single (optinal)
+    decimal point (or decimal comma if european name system),
+    which if found will be processed.  In the case of reading from
+    standard input, all valid data found on standard input will be
+    considered as if it were a single number.
+
+    A number may be either a in decimal or in scientific notation (e.g.,
+    2.5e100).  Negative and floating point numbers are allowed.
+
+    Updates from time to time are made to this program.
+    See http://reality.sgi.com/chongo/number for updates.
+
+    You are using $version.
+
+    chongo <{chongo,noll}\@{toad,sgi}.com> was here /\\../\\
+};
+
+# main
+#
+MAIN:
+{
+    # my vars
+    #
+    my $sep;		# set of 3 digits separator
+    my $point;		# decimal point or comma
+    my $integer;	# integer part
+    my $fract;		# fractional part
+    my $system;		# American or European (but not a Swallow :-))
+    my $visit;		# visit counter or error message
+    my $num;		# input value
+    my $neg;		# 1 => number if < 0
+
+    # setup
+    #
+    select(STDOUT);
+    $| = 1;
+
+    # determine if we are CGI based
+    #
+    if ($0 =~ /\.cgi$/) {
+
+	# we are a CGI script, web restictions apply
+	$html = 1;
+
+	# CGI setup
+	#
+	$cgi = new CGI;
+	$cgi->use_named_parameters(1);
+
+	# print CGI form
+	#
+	$num = &cgi_form();
+
+    # non-CGI parsed args
+    #
+    } elsif (!getopts('pLdmcleh')) {
+	&error("usage: $0 $usage\n");
+	exit(1);
+    }
+
+    # Print help if that is all that is required
+    #
+    if (defined($opt_h)) {
+	print $help;
+	exit(0);
+    }
+
+    # -c conflicts with -L and -p
+    #
+    if (defined($opt_c) && (defined($opt_L) || defined($opt_p))) {
+	if ($html == 0) {
+	    &error("-c conflicts with -L and -p");
+	} else {
+	    &error("You may only print decimal digits when the input is " .
+	        "just a number.\n");
+	}
+    }
+
+    # determine if dashes will appear in the name
+    #
+    if (defined($opt_d)) {
+
+	# print -'s between useful parts of the name
+	#
+	$dash = "-";
+    }
+
+    # determine the name system being used
+    #
+    if (defined($opt_e)) {
+	$system = "European";
+	$sep = ".";
+	$point = ",";
+    } else {
+	$system = "American";
+	$sep = ",";
+	$point = ".";
+    }
+
+    # get the number
+    #
+    if (defined $ARGV[0]) {
+	$num = $ARGV[0];
+    } elsif ($html == 0) {
+	# snarf the number from the entire stdin
+	#
+	$/ = undef;
+	$num = <>;
+    }
+
+    # strip separators and whitespace
+    #
+    $num =~ s/[\s\Q$sep\E]+//g;
+
+    # note if negative or positive
+    #
+    # We remove any leading - to optimize for the positive case.
+    #
+    if ($neg = ($num =~ /^-/)) {
+	$num =~ s/^-//;
+    }
+
+    # strip leading 0's
+    #
+    if ($num =~ /^0/) {
+	if ($num =~ /^00+$/) {
+	    # deal with only 0's case
+	    $num = "0";
+	} else {
+	    # strip off leading 0's
+	    $num =~ s/^0+//;
+	}
+    }
+
+    # firewall
+    #
+    if ($html == 1 && length($num) >= $too_big) {
+	&big_error();
+    }
+    if ($num =~ /\Q$point\E.*\Q$point\E/o) {
+	&error("Numbers may have only one decimal $point.\n");
+    }
+    if ($num =~ /^$/) {
+	$num = "0";
+    }
+
+    # If scientific (e or E notation), verify format
+    # and convert it into a long decimal value.
+    #
+    if ($num =~ /[eE]/) {
+	if ($num !~ /^[\d\Q$point\E]+[Ee]-?\d+$/o) {
+	    &error(
+	        "Scientific numbers may only have a leading -, digits\n" .
+		"an optional decimal $point (optionally followed by digits)\n" .
+		"before e (or E).  The e (or E) may only be followed by an\n" .
+		"optional - and 1 more more digits after the e.  All\n" .
+		"$sep's, leading 0's and whitespace characters are ignored.\n");
+	}
+	if ($num !~ /^\Q$point\E?\d/o) {
+	    &error("Scientific numbers must at least a digit before the e.\n");
+	}
+	$num = &exp_number($num, $point);
+    }
+
+    # verify that we have a valid number
+    #
+    if ($num !~ /^[\d\Q$point\E]+$/o || $num =~ /^\Q$point\E$/) {
+	&error("A number may only have a leading -, digits and an " .
+	       "optional decimal $point.  All $sep's and whitespace\n" .
+	       "characters and leading 0's are ignored.\n");
+    }
+
+    # split into integer and fractional parts
+    #
+    ($integer, $fract) = split /\Q$point\E/, $num;
+
+    # catch the case where we only want to enter a power of 10
+    #
+    if ($opt_p || $opt_L) {
+
+       # only allow powers of 10 that are non-negative integers
+       #
+       if (defined($fract) || $neg) {
+	    &error("The power must be a non-negative integer.\n");
+
+       # print the name
+       #
+       } else {
+	   &power_of_ten(\$integer, $system);
+       }
+
+    # print the number comma/dot separated
+    #
+    } elsif ($opt_c) {
+
+	if ($opt_l) {
+	    &print_number($sep, $neg, \$integer, $point, \$fract, 0);
+	} else {
+	    &print_number($sep, $neg, \$integer, $point, \$fract, 76);
+	}
+
+    # otherwise print the first part of the response if allowed
+    #
+    } else {
+	&print_name($neg, \$integer, \$fract, $system);
+    }
+
+    # If we are doing CGI/HTML stuff, print the trailer
+    #
+    if ($html == 1) {
+	&trailer(0);
+    }
+
+    # all done
+    #
+    exit(0);
+}
+
+# exp_number - convert a scientific notation number into an number
+#
+# given:
+#	$num	contains a string with something like -3.5e70 or
+#		.5e50 or 4E50 or 4.E-49
+#	$point	the decimal point/comma
+#
+# returns:
+#	an equivalent decimal value (non-scientific)
+#
+sub exp_number($$)
+{
+    my ($num, $point) = @_;	# get args
+    my $exp;	# base 10 exponent (value after the E)
+    my $lead;	# lead digits (before the E)
+    my $int;	# integer part of lead
+    my $frac;	# fractional part of lead
+
+    # we have something like -3.5e70 or .5e50 or 4E50 or 4.E-49
+    # break it apart into before and after the E
+    #
+    ($lead, $exp) = split(/[Ee]/, $num);
+
+    # We need to split the lead between before and after the
+    # decimal point/comma
+    #
+    ($int, $frac) = split(/\Q$point\E/, $lead);
+    $frac = "" if !defined($frac);
+
+    # If we need to move the decimal point/comma to the right, then
+    # we do so by moving digits from $fract onto the end of $int and
+    # adding more 0's onto the end of $int as needed.
+    #
+    if ($exp > 0) {
+
+	# limit the size of the input in a arbitrary way when in CGI/HTML mode
+	#
+	if ($html == 1 && $exp >= $too_big) {
+	    &big_error();
+	}
+
+	# If we have more exp than $frac digits, then just
+	# tack the $frac onto the end of the $int part.  We
+	# then add more 0's onto the end of $int as needed.
+	#
+	if (length($frac) <= $exp) {
+
+	    # move all $frac digits to the left of decimal point/comma
+	    #
+	    $int .= $frac;
+	    $exp -= length($frac);
+	    $frac = "";
+
+	    # add on more 0's if and as needed
+	    #
+	    $int .= '0' x $exp;
+
+	# we have fewer exp than $frac digits, so we will move
+	# only part of the $frac to the $int side
+	#
+	} else {
+	    $int .= substr($frac, 0, $exp);
+	    $frac = substr($frac, $exp);
+	}
+
+    # If we need to move the decimal point/comma to the left, then
+    # we do so by moving digits from the end of $int onto the front
+    # if $frac and adding more 0's on the front of $frac as needed.
+    #
+    } elsif ($exp < 0) {
+
+	# switch the negative exp to mean shift left count
+	#
+	$exp = -$exp;
+
+	# limit the size of the input in a arbitrary way when in CGI/HTML mode
+	#
+	if ($html == 1 && $exp >= $too_big) {
+	    &big_error();
+	}
+
+	# If we have more exp than $int digits, then we just
+	# tack the $int part onto the front of the $int part
+	# and set $int to 0.  We then add more 0's onto the
+	# front of $frac as needed.
+	#
+	if (length($int) <= $exp) {
+
+	    # move all $int digits to the right of decimal point/comma
+	    #
+	    $frac = $int . $frac;
+	    $exp -= length($int);
+	    $int = "0";
+
+	    # add on more 0's if and as needed
+	    #
+	    $frac = ('0' x $exp) . $frac;
+
+	# we have fewer exp than $int digits, so we will move
+	# only part of the $int to the $frac side
+	#
+	} else {
+	    $frac = substr($int, -$exp) . $frac;
+	    $int = substr($int, 0, length($int)-$exp);
+	}
+    }
+
+    # we have the value as decimal in $int and $frac, form the
+    # final decimal and return it
+    #
+    if ($frac =~ /^\d/) {
+	return $int . $point . $frac;
+    } else {
+	return $int;
+    }
+}
+
+
+# print_number - print the number with ,'s or .'s
+#
+# given:
+#	$sep		, or . set of 3 digit separators
+#	$neg		1 => number is negative, 0 => non-negative
+#	\$integer	integer part of the number
+#	$point		decimal point/comma
+#	\$fract		fractional part of number (or undef)
+#	$linelen	max line length (0 => no limit)
+#
+sub print_number($$\$$\$$)
+{
+    my ($sep, $neg, $integer, $point, $fract, $linelen) = @_;	# get args
+    my $wholelen;	# length of the integer part
+    my $fractlen;	# length of the fractional part
+    my $leadlen;	# length of digits, seperaotrs and - on 1st line
+    my $col;		# current output column, first col is 1
+    my $i;
+
+    # deal with the zero special case
+    #
+    if ($$integer eq "") {
+	$$integer = "0";
+    }
+
+    # We will round the max line length down to a multiple of 4
+    #
+    if (!defined($linelen)) {
+	$linelen = 0;
+    } elsif ($linelen > 0) {
+	$linelen = int($linelen/4) * 4;
+    } else {
+	$linelen = 0;
+    }
+
+    # no line length specified (or value passed < 4) means just print it
+    # on a single line
+    #
+    if ($linelen == 0) {
+
+	# Print the number, and fraction if it exists on a single line.
+	#
+	if (defined($$fract)) {
+	    print "-" if $neg;
+	    print $$integer, $point, $$fract, "\n";
+	} else {
+	    print "-" if $neg;
+	    print $$integer, "\n";
+	}
+
+    # If we have a line length, we need to insert newlines after
+    # the separators to keep within the max line length.
+    #
+    } else {
+
+	# determine the length of the integer part of the number
+	#
+	$wholelen = length($$integer);
+	$leadlen = $wholelen;
+	if ($wholelen > 3) {
+	    # account for separators
+	    $leadlen += ($wholelen-1)/3;
+	} else {
+	}
+	if ($neg) {
+	    # account for - sign
+	    ++$leadlen;
+	}
+
+	# print enough the leading whitespace so that the
+	# decimal point/comma will line up at the end of a line
+	#
+	$col = ($linelen - (($leadlen+1) % $linelen)) % $linelen;
+	print " " x $col;
+
+	# process a leading -, if needed
+	#
+	if ($neg) {
+	    if (++$col >= $linelen) {
+		# This could mean that we have a lone - in the 1st line
+		# but there is nothing we can do about that if we want
+		# the decimal point/comma to be at the end of a line
+		# and the separators to line up in colums (particularly
+		# along the right hand edge)
+		print "-\n";
+		$col = 1;
+	    } else {
+		print "-";
+	    }
+	}
+
+	# output the leading digits before the first separator
+	#
+	$i = length($$integer) % 3;
+	if ($i == 0) {
+	    $i = 3;
+	}
+	$col += $i;
+	print substr($$integer, 0, $i);
+
+	# output , and 3 digits until whole number is exhusted
+	#
+	while ($i < $wholelen) {
+
+	    # output the separator, we add a newline if the line
+	    # is at or beyond the limit
+	    #
+	    if (++$col >= $linelen) {
+		print "$sep\n";
+		$col = 1;
+	    } else {
+		print $sep;
+	    }
+
+	    # output 3 more digits
+	    #
+	    print substr($$integer, $i, 3);
+	    $col += 3;
+	    $i += 3;
+	}
+
+	# print the decimal point/comma followed by the fractional
+	# part if needed
+	#
+	if (defined($$fract)) {
+
+	    # print the decimal point/comma and move to a new line
+	    #
+	    print "$point\n";
+	    $col = 1;
+
+	    # print the rest of the faction in linelen chunks
+	    #
+	    $fractlen = length($$fract);
+	    for ($i = 0; $i < $fractlen; $i += $linelen) {
+		print substr($$fract, $i, $linelen), "\n";
+	    }
+
+	# otherwise finish up the integer line
+	} else {
+	    print "\n";
+	}
+    }
+}
+
+
+# latin_root - return the Latin root of a number
+#
+# given:
+#	$num	number to construct
+#
+# Prints the latin root name on which we can add llion or lliard to
+# form a name for 1000^($num+1), depending on American or European
+# name system.
+#
+sub latin_root($)
+{
+    my $num = $_[0];	# number to construct
+    my @set3;	# set of 3 digits, $set3[0] is the most significant
+    my $d3;	# 3rd digit in a set of 3
+    my $d2;	# 2nd digit in a set of 3
+    my $d1;	# 1st digit in a set of 3
+    my $l3;	# latin name for 3rd digit in a set of 3
+    my $l2;	# latin name for 2nd digit in a set of 3
+    my $l1;	# latin name for 1st digit in a set of 3
+    my $len;	# number of sets of 3 including the final (perhaps partial) 3
+    my $i;
+
+    # deal with small special cases for small values
+    #
+    if ($num < @l_special) {
+	print $l_special[$num], $dash;
+	return;
+    }
+
+    # determine the number of sets of 3 and the length
+    #
+    $num =~ s/[^\d]//g;
+    $i = length($num);
+    $len = int(($i + 2) / 3);
+    if ($i % 3 == 0) {
+	@set3 = unpack("a3"x$len, $num);
+    } elsif ($i % 3 == 1) {
+	@set3 = unpack("a"."a3"x($len-1), $num);
+	$set3[0] = "00" . $set3[0];
+    } else {
+	@set3 = unpack("a2"."a3"x($len-1), $num);
+	$set3[0] = "0" . $set3[0];
+    }
+
+    # process each set of 3 digits up to but not
+    # including the last set of 3
+    #
+    for ($i=0; $i < $len; ++$i) {
+
+	# do nothing if 000
+	#
+	if ($set3[$i] == 0) {
+	    next;
+	}
+
+	# extract digits in the current set of 3
+	#
+	# The 100's place is a little bit tricky.  Normally the hundred names
+	# end in a ``t'', however when we are dealing with the last set of
+	# 3 and there is no tens or ones, then the ''t'' is thought to belong
+	# to the final ``tillion'' or ``tillard''.
+	#
+	$d1 = substr($set3[$i], 2, 1);
+	$l1 = (($d1 > 0) ? $l_unit[$d1] . $dash : "");
+	$d2 = substr($set3[$i], 1, 1);
+	$l2 = (($d2 > 0) ? $l_ten[$d2] . $dash : "");
+	$d3 = substr($set3[$i], 0, 1);
+	$l3 = (($d3 > 0) ? $l_hundred[$d3] .
+			   (($i == $len-1 && $d1 == 0 && $d2 == 0) ? "" : "t") .
+			   $dash : "");
+
+	# print the 3 digits
+	#
+	# We will skip the printing of the 3 digits if
+	# we have just 001 in all but the lowest set of 3.
+	# This results in no output do that we wind up with
+	# something such as:
+	#
+	#	millia-tillion
+	#
+	# instead of:
+	#
+	#	un-millia-tillion
+	#
+	if ($i == $len-1 || $d1 != 1 || $d2 != 0 || $d3 != 0) {
+	    print "$l3$l1$l2";
+	}
+
+	# add one the millia as needed
+	#
+	if ($i < $len-1) {
+	    if ($opt_m && $i < $len-2) {
+		print "millia^", $len-$i-1, "$dash";
+	    } else {
+		print "millia$dash" x ($len-$i-1);
+	    }
+	}
+    }
+
+    # For the case of ending in 1x we need to end in an 'i'
+    # instead of the usual 'ti'.  This is decause we say:
+    #
+    #	trecen-dec-illion
+    #
+    # instead of:
+    #
+    #	trecen-dec-tillion
+    #
+    if ($d2 == 1) {
+	print "i";
+    } else {
+	print "ti";
+    }
+
+    # all done
+    #
+    return;
+}
+
+
+# american_kilo - return the name of power of 1000 under American system
+#
+# given:
+#	$power		power of 1000
+#
+# Prints the name of 1000^$power.
+#
+sub american_kilo($)
+{
+    my $power = $_[0];		# power of 1000
+
+    # firewall
+    #
+    if ($power < 0 || $power != int($power)) {
+	&error(
+	    "Negative and fractional powers of 1000 not supported: $power\n");
+    }
+
+    # We treat 0 as nothing
+    #
+    if ($power == 0) {
+	return;
+
+    # We must deal with 1 special since it does not use a direct Latin root
+    #
+    } elsif ($power == 1) {
+	print "thousand";
+
+    # Otherwise we use the Latin root process to construct the value.
+    #
+    } else {
+	&latin_root($power-1);
+	print "llion";
+    }
+}
+
+
+# european_kilo - return the name of power of 1000 under European system
+#
+# given:
+#	$power		power of 1000
+#
+# Prints the name of 1000^$power.
+#
+# The European system uses both "llion" and "lliard" suffixes for
+# each root value.  The "llion" is for even powers and the "lliard"
+# is for off powers.
+#
+# Because both "llion" and "lliard" suffixes are used, we need to
+# divide in half, the value before using the Latin root system.
+#
+sub european_kilo($)
+{
+    my $power = $_[0];		# power of 1000
+
+    # firewall
+    #
+    if ($power < 0 || $power != int($power)) {
+	&error(
+	    "Negative and fractional powers of 1000 not supported: $power\n");
+    }
+
+    # We treat 0 as nothing
+    #
+    if ($power == 0) {
+	return;
+
+    # We must deal with 1 special since it does not use a direct Latin root
+    #
+    } elsif ($power == 1) {
+	print "thousand";
+
+    # Even roots use "llion"
+    #
+    } elsif ($power % 2 == 0) {
+	&latin_root($power/2);
+	print "llion";
+
+    # Odd roots use "llaird"
+    #
+    } elsif ($power % 2 == 1) {
+	&latin_root(int($power/2));
+	print "llaird";
+    }
+}
+
+
+# power_of_ten - just print name of a the power of 10
+#
+# given:
+#	\$power	the power of 10 to name print
+#	$system	the number system ('American' or 'European')
+#
+sub power_of_ten(\$$)
+{
+    my ($power, $system) = @_;		# get args
+    my $kilo_power;			# power of 1000 to ask about
+    my $big;				# $power as a BigInt
+    my $mod3;				# $big mod 3
+    my $mod2;				# $kilo_power mod 2
+    my $one;				# 1 as a BigInt;
+
+    # make 1  :-)
+    #
+    $one = Math::BigInt->new("1");
+
+    # Convert $$power arg into BigInt format
+    #
+    $big = Math::BigInt->new($$power);
+
+    # convert the power of 10 into a multipler and a power of 1000
+    #
+    # If we gave -L, then we will assume that we are dealing with
+    # a power of 1000 instead of a power of 10.
+    #
+    if ($opt_L) {
+
+	# under -L, we deal with powers of 1000 above 1000
+	#
+	$kilo_power = $big + 1;
+
+	# under -L, our miltiplier name is always one
+	#
+	print "one";
+
+    } else {
+
+	# convert power of 10 into power of 1000
+	#
+	$^W = 0;
+	$kilo_power = $big / 3;
+
+	# print the multipler name
+	#
+	$mod3 = ($big % 3);
+	$^W = $warn;
+	if ($mod3->bcmp($one) < 0) {
+	    print "one";
+	} elsif ($mod3->bcmp($one) == 0) {
+	    print "ten";
+	} else {
+	    print "one hundred";
+	}
+    }
+
+    # To avoid passing the BigInt issue onto &american_kilo() and
+    # &european_kilo() we will to our own suffix generation here
+    # and bypass them.  Unfortunatly we must duplicate code again
+    # as a result.
+
+    # A zero kilo_power means that we only have 1, 10 or 100
+    # and so there is nothing else to print.
+    #
+    if ($kilo_power->bcmp($one) < 0) {
+	# nothing else to print
+
+    # We must treat a kilo_power of 1 as a special case
+    # because 'thousand' does not have a Latin root base.
+    #
+    } elsif ($kilo_power->bcmp($one) == 0) {
+	print " thousand";
+
+    # print the name based on the American name system
+    #
+    } elsif ($system eq 'American') {
+
+	print " ";
+	&latin_root($kilo_power-1);
+	print "llion";
+
+    # print the name based on the European name system
+    #
+    } else {
+
+	$^W = 0;
+	$mod2 = $kilo_power % 2;
+	$kilo_power /= 2;
+	$^W = $warn;
+	if ($mod2->bcmp($one) < 0) {
+	    print " ";
+	    &latin_root($kilo_power);
+	    print "llion";
+	} else {
+	    print " ";
+	    &latin_root($kilo_power);
+	    print "llaird";
+	}
+    }
+    print "\n";
+}
+
+
+# print_name - print the name of a number
+#
+# given:
+#	$neg		1 => number is negative, 0 => non-negative
+#	\$integer	intger part of the number
+#	\$fract		fractional part of number (or undef)
+#	$system	the number system ('American' or 'European')
+#
+sub print_name($\$\$$)
+{
+    my ($neg, $integer, $fract, $system) = @_;	# get args
+    my $intlen;		# length of integer part in digits
+    my $cnt3;		# current set of 3 index (or partial of highest)
+    my $set3;		# set of 3 digits
+    my $indx;		# index into integer
+    my $i;
+
+    # process a leading -, if needed
+    #
+    if ($neg) {
+	print "negative ";
+    }
+
+    # must deal with the zero as a special case
+    #
+    if ($$integer eq "0") {
+	print "zero";
+    }
+
+    # determine the number of sets of 3
+    #
+    $intlen = length($$integer);
+    $cnt3 = int(($intlen+2)/3);
+
+    # print the highest order set, which may be partial
+    #
+    $indx = 3-((3*$cnt3)-$intlen);
+    $set3 = substr($$integer, 0, $indx);
+    &print_3($set3);
+    print " ";
+    --$cnt3;
+    if ($system eq 'American') {
+	&american_kilo($cnt3);
+    } else {
+	&european_kilo($cnt3);
+    }
+
+    # process all of the the remaining full sets of 3 (if any)
+    #
+    while (--$cnt3 >= 0) {
+	$set3 = substr($$integer, $indx, 3);
+	$indx += 3;
+	next if $set3 == 0;
+	if (defined $opt_l) {
+	    print ", ";
+	} else {
+	    print ",\n";
+	}
+	&print_3($set3);
+	if ($cnt3 > 0) {
+	    print " ";
+	    if ($system eq 'American') {
+		&american_kilo($cnt3);
+	    } else {
+		&european_kilo($cnt3);
+	    }
+	}
+    }
+
+    # print after the decimal point if needed
+    #
+    if (defined($$fract)) {
+
+	# mark the decimal point/comma
+	#
+	if (defined $opt_l) {
+	    print " ";
+	} else {
+	    print "\n";
+	}
+	if ($system eq 'American') {
+	    print "point";
+	} else {
+	    print "comma";
+	}
+
+	# list off the digits
+	#
+	for ($i=0; $i < length($$fract); ++$i) {
+	    if (defined $opt_l) {
+		print " ";
+	    } else {
+		print "\n";
+	    }
+	    print  $digit[ substr($$fract, $i, 1) ];
+	}
+    }
+    print "\n";
+}
+
+
+# print_3 - print 3 digits
+#
+# given:
+#	$dig3	1 to 3 digits
+#
+# Will print the english name of a number form 0 thru 999.
+#
+sub print_3($)
+{
+    my ($number) = @_;	# get args
+    my $num;		# working value of number
+    my $name_3;		# 3 digit name
+
+    # pre-compute name of 3 digits if we do not alread have it
+    #
+    if (! defined($english_3[$number])) {
+
+	# setup
+	#
+	&error("print_3 called with arg not in [0,999] range: $number\n")
+	   if ($number < 0 || $number > 999);
+	$name_3 = "";
+
+	# determine the hundreds name, if needed
+	#
+	if ($number > 99) {
+	    $name_3 = $digit[$number/100] . " hundred";
+	}
+
+	# determine the name of tens and one if more than 19
+	#
+	$num = $number % 100;
+	if ($num > 19) {
+	    if ($number > 99) {
+		$name_3 .= " ";
+	    }
+	    $name_3 .= $ten[$num/10];
+	    if ($num % 10 > 0) {
+		$name_3 .= " " . $digit[$num % 10];
+	    }
+
+	# determine the name of tens and one if more than 9
+	#
+	} elsif ($num > 9) {
+	    if ($number > 99) {
+		$name_3 .= " ";
+	    }
+	    $name_3 .= $twenty[$num-10];
+
+	# otherwise determine the name the digit
+	#
+	} elsif ($num > 0) {
+	    if ($number > 99) {
+		$name_3 .= " ";
+	    }
+	    $name_3 .= $digit[$num];
+	}
+
+	# save the 3 digit name
+	#
+	$english_3[$number] = $name_3;
+    }
+
+    # print the 3 digit name
+    #
+    print $english_3[$number];
+}
+
+
+# cgi_form - print the CGI/HTML form
+#
+# returns:
+#	$num	input value
+#
+sub cgi_form(\$)
+{
+    # radio label sets
+    #
+    my %input_label = (
+	"number" => " Just a number",
+	"exp" => " Power of 10",
+	"latin" => " Latin power (1000^(number+1))"
+    );
+    my %output_label = (
+	"name" => " English name",
+	"digit" => " Decimal digits if input is just a number"
+    );
+    my %system_label = (
+	"usa" => " American system",
+	"europe" => " European system"
+    );
+    my %millia_label = (
+	"dup" => " milliamillia...",
+	"power" => " millia^7 (compact form)"
+    );
+    my %dash_label = (
+	"nodash" => " without any -'s",
+	"dash" => " with -'s between parts of words"
+    );
+
+    print $cgi->header,
+	  $cgi->start_html('title' => 'The Name of a Number',
+			 'bgcolor' => '#80a0c0'),
+	  $cgi->h1('The Name of a number'),
+	  $cgi->p,
+	  "See the ",
+	  $cgi->a({'HREF' => "/chongo/number/example.html"},
+		  "example / help"),
+	  " page for an explination of the options below.\n",
+	  $cgi->p,
+	  $cgi->start_form,
+	  "Type of input:",
+	  "&nbsp;" x 4,
+	  $cgi->radio_group('name' => 'input',
+			  'values' => ['number', 'exp', 'latin'],
+			  'labels' => \%input_label,
+			  'default' => 'number'),
+	  $cgi->br,
+	  "Type of output:",
+	  "&nbsp;" x 2,
+	  $cgi->radio_group('name' => 'output',
+			  'values' => ['name', 'digit'],
+			  'labels' => \%output_label,
+			  'default' => 'name'),
+	  $cgi->br,
+	  "Name system:",
+	  "&nbsp;" x 4,
+	  $cgi->radio_group('name' => 'system',
+			  'values' => ['usa', 'europe'],
+			  'labels' => \%system_label,
+			  'default' => 'usa'),
+	  $cgi->br,
+	  "Millia styie:",
+	  "&nbsp;" x 8,
+	  $cgi->radio_group('name' => 'millia',
+			  'values' => ['dup', 'power'],
+			  'labels' => \%millia_label,
+			  'default' => 'dup'),
+	  $cgi->br,
+	  "Dash styie:",
+	  "&nbsp;" x 10,
+	  $cgi->radio_group('name' => 'dash',
+			  'values' => ['nodash', 'dash'],
+			  'labels' => \%dash_label,
+			  'default' => 'nodash'),
+	  $cgi->p,
+	  $cgi->b('<FONT SIZE="+1">Enter a number:</FONT>'),
+	  $cgi->br,
+	  $cgi->textarea('name' => 'number',
+		         'rows' => '10',
+		         'columns' => '60'),
+	  $cgi->p,
+	  $cgi->submit(name=>'Name that number'),
+	  $cgi->end_form;
+
+    # Prep for the reply
+    #
+    # We need to convert the CGI parameters into values that
+    # would have been set if we were processing the input
+    # on the command line.
+    #
+    if ($cgi->param()) {
+
+	# determine the input mode
+	#
+	if (defined($cgi->param('input'))) {
+	    if ($cgi->param('input') eq "exp") {
+		$opt_p = 1;	# assume -p (power of 10)
+	    } elsif ($cgi->param('input') eq "latin") {
+		$opt_L = 1;	# assume -L (1000 ^ (number+1))
+	    }
+	}
+
+	# determine the output mode
+	#
+	if (defined($cgi->param('output')) &&
+	    $cgi->param('output') eq "digit") {
+	    $opt_c = 1;		# assume -c (comma/dot decimal)
+	}
+
+	# determine the system
+	#
+	if (defined($cgi->param('system')) &&
+	    $cgi->param('system') eq "europe") {
+	    $opt_e = 1;		# assume -e (European system)
+	}
+
+	# determine the millia style
+	#
+	if (defined($cgi->param('millia')) &&
+	    $cgi->param('millia') eq "power") {
+	    $opt_m = 1;		# assume -m (compact millia method)
+	}
+
+	# determine the dash method in names
+	#
+	if (defined($cgi->param('dash')) && $cgi->param('dash') eq "dash") {
+	    $opt_d = 1;		# assume -d (use -'s in names)
+	}
+
+	# get ready to print the value
+	#
+	print $cgi->hr,
+	      $cgi->p;
+	if (defined($opt_c)) {
+	    print $cgi->b("Decimal value:");
+	} else {
+	    print $cgi->b("Name of number:");
+	}
+	print "\n<BLOCKQUOTE>",
+	      "<PRE>";
+
+    # We have just the initial display.  There is no input value.
+    # Just print the trailer and exit, do not return.
+    #
+    } else {
+	print "\n<BLOCKQUOTE>\n",
+	      "<PRE>";
+	&trailer(0);
+	exit(0);
+    }
+
+    # return the number
+    #
+    return $cgi->param('number');
+}
+
+# trailer - print the trailer
+#
+# given:
+#	$arg	1 => supress message about obtaining the source
+#
+# If the arg passed is 1, then the message about obtaining the source
+# if surpressed.
+#
+sub trailer($)
+{
+    my $arg = $_[0];
+
+    # close off input
+    #
+    print "</PRE>\n</BLOCKQUOTE>\n<HR>\n<P>\n";
+
+    # display how to get to the source
+    #
+    if (defined($arg) && $arg == 0) {
+	print <<END_OF_HTML;
+	The <A HREF="/chongo/number/number">source</A> for this CGI
+	script is available.
+	Save it as either <B>number.cgi</B> and/or <B>number</B>.
+	<p>
+	If you run this program as <B>number</B> (i.e., without the <B>.cgi</B>
+	extension),
+	then it runs as normal program without all of the CGI/HTML stuff.
+	In normal program mode, the program does not enforce an arbitrary
+	size limit.
+	Try <B>./number -h</B> for more information.
+	<P>
+	<HR>
+END_OF_HTML
+    }
+
+    print <<END_OF_HTML;
+    <P>
+    Brought to you by:
+    </P> <blockquote>
+    <A HREF="http://reality.sgi.com/chongo/index.html">chongo</A>
+    &lt; was here &gt;
+    <STRONG>/\\oo/\\</STRONG>
+    </BLOCKQUOTE>
+
+    </BODY>
+    </HTML>
+END_OF_HTML
+}
+
+
+# big_error - print a too big error and exit
+#
+sub big_error()
+{
+
+    # close off input
+    #
+    print "</PRE>\n<P>\n";
+
+    # print too big error
+    #
+    print $cgi->p,
+	  $cgi->b("SORRY!"),
+	  "&nbsp;&nbsp;We have imposed an arbitrary size limit on",
+	  " the output of this CGI program.",
+	  $cgi->p,
+	  "Even though there is no limit on the size of\n",
+	  "of number that the algorithm can name, we had to put some limit\n",
+	  "on the size of the number we would print.  Otherwise someone\n",
+	  "could enter a number such as <TT>1e1000000000</TT> causing\n",
+	  "the server to flood the network with lots of data ... assuming\n",
+	  "we had the memory to form the print buffer in the first place!\n",
+	  $cgi->p,
+	  "You have 4 choices:\n",
+	  "<ol>\n<li> Enter a number that is ",
+	  "less than $too_big characters in length.\n",
+	  "<li> Compute a Latin power of a number that is ",
+	  "less than $too_big characters in length.\n",
+	  "<li> Raise 10 to a power where the exponent is ",
+	  "less than $too_big characters in length.\n",
+	  "<li> You may download the\n",
+	  $cgi->a({'href' => "/chongo/number/number"},
+		  "number perl script"),
+	  " and run it yourself.<br>\n",
+	  "</ol>\n",
+	  $cgi->p,
+	  "The ",
+	  $cgi->a({'href' => "/chongo/number/number"},
+		  "number perl script"),
+	  " reads a number from standard input and has no size limit.<br>\n",
+	  " Try <b>./number -h</b> for more information.",
+	  $cgi->p,
+	  "NOTE: &nbsp;Numbers entered in scientific notation are currently\n",
+	  "expanded into the full decimal form prior to any \n",
+	  "$too_big character length checking.\n",
+	  $cgi->p;
+    &trailer(1);
+    exit(1);
+}
+
+
+# error - report an error in CGI/HTML or die form
+#
+# given:
+#	$msg	the message to print
+#
+sub error($)
+{
+    my $msg = $_[0];	# get args
+
+    # just issue the die message if not in CGI/HTML mode
+    #
+    if ($html == 0) {
+	die $msg;
+    }
+
+    # issue an error message in CGI/HTML
+    #
+    print $cgi->p,
+	  $cgi->b("SORRY! "),
+	  $msg;
+    &trailer(0);
+    exit(1);
+}
