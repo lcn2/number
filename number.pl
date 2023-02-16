@@ -1,6 +1,4 @@
-#!/usr/bin/perl -w
-#!/usr/bin/perl -wT
-#  @(#} $Revision: 3.10 $
+#!/usr/bin/env perl -w
 #
 # number - print the English name of a number of any size
 #
@@ -59,7 +57,7 @@
 #
 ####
 #
-# Copyright (c) 1998-2011,2016 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2011,2016,2023 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
