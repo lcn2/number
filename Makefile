@@ -1,6 +1,6 @@
 #!/usr/bin/env make
 #
-# number - number makefile
+# number - print the English name of a number of any size
 #
 # Copyright (c) 1999-2014,2023 by Landon Curt Noll.  All Rights Reserved.
 #
