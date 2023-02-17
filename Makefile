@@ -35,12 +35,6 @@ DESTBIN= /usr/local/bin
 # what to build
 TARGETS= number.cgi number number.tgz
 
-# remote operations
-#
-THISDIR= number
-RSRCPSH= rsrcpush
-RMAKE= rmake
-
 all: ${TARGETS}
 
 number.cgi: number.pl
