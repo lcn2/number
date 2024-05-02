@@ -47,6 +47,16 @@
 #
 ####
 #
+# The GitHub repo for number is:
+#
+#	https://github.com/lcn2/number
+#
+# To be sure your copy is up to date, please clone that repo:
+#
+#	git clone https://github.com/lcn2/number.git
+#
+####
+#
 # Be sure to visit:
 #
 #	http://www.isthe.com/chongo/tech/math/number/number.html
@@ -57,7 +67,7 @@
 #
 ####
 #
-# Copyright (c) 1998-2011,2016,2023 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1998-2011,2016,2023,2024 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -103,8 +113,18 @@
 # This code uses the CGI.pm perl module, which is no longer actively
 # maintained.  If you want to help convert this code away from using
 # the CGI.pm perl module and instead using a CGI-like module that is
-# actucally maintained AND is part of core perl, please submit a
-# pull request with such a change.
+# actively maintained AND is part of core perl, please submit a
+# pull request with such a change:
+#
+#	https://github.com/lcn2/number/pulls
+#
+# The GitHub repo for number is:
+#
+#	https://github.com/lcn2/number
+#
+# To be sure your copy is up to date, please clone that repo:
+#
+#	git clone https://github.com/lcn2/number.git
 #
 ####
 
@@ -196,13 +216,23 @@
 # The original code only described just the "American" and "European"
 # systems. We don't have the time, or the energy to codify the many
 # English variations.  If you wish extend this code to describes a
-# favorite variation, then you are welcome to submit a pull request.
+# favorite variation, then you are welcome to submit a # pull request to:
+#
+#	https://github.com/lcn2/number/pulls
+#
+# The GitHub repo for number is:
+#
+#	https://github.com/lcn2/number
+#
+# To be sure your copy is up to date, please clone that repo:
+#
+#	git clone https://github.com/lcn2/number.git
 #
 # To invoke your variation, please use:
 #
 #     -r name_of_your_ruleset
 #
-# We will consider patches that describe a regional English variation
+# We will consider pull requests that describe a regional English variation
 # only.  Please do not submit a patch for an "improved number naming
 # systems" (see the previous section).
 #
@@ -219,26 +249,26 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.10.1 $';
+my $version = '3.10.2 2024-05-02';
 
 # CGI / HTML variables
 #
 # NOTE: This code uses CGI.pm, which while not part of core perl,
-# 	may be installed via the command:
+#	may be installed via the command:
 #
 #	    cpanm CGI
 #
 #	See:
 #
-#	      	http://search.cpan.org/perldoc?cpanm
+#		http://search.cpan.org/perldoc?cpanm
 #
 # NOTE: RHEL (and systems that use yum) users may install cpanm via:
 #
-# 	yum install perl-App-cpanminus
+#	yum install perl-App-cpanminus
 #
 # NOTE: See above in the "HELP WANTED" section for a request
-# 	to convert this code to something that uses a better CGI
-# 	perl module that is maintained and is part of core perl.
+#	to convert this code to something that uses a better CGI
+#	perl module that is maintained and is part of core perl.
 #
 my $html = 0;		# 1 ==> be are being invoked as a CGI script
 my $cgi = 0;		# CGI object, if invoked as a CGI script
@@ -423,15 +453,16 @@ my $help = qq{Usage:
 
     Updates from time to time are made to this program.  See:
 
-    	http://www.isthe.com/chongo/tech/math/number/number.html
+	https://github.com/lcn2/number
 
-    for updates.  See also:
+    for the latest version of this code.  See also:
 
 	http://www.isthe.com/chongo/tech/math/number/howhigh.html
 
-    You are using $version.
+    You are using Version:
 
-    http://www.isthe.com/chongo/index.html
+        $version
+
 };
 
 # forward declarations
@@ -596,13 +627,13 @@ MAIN:
     # determine the Latin root naming system
     #
     if ($opt_i) {
-    	# informal Latin room system (using du/do)
+	# informal Latin room system (using du/do)
 	@l_unit = @old_unit;
 	@l_ten = @old_ten;
 	@l_hundred = @old_hundred;
 	@l_special = @old_special;
     } else {
-    	# formal Latin room system (using duo)
+	# formal Latin room system (using duo)
 	@l_unit = @new_unit;
 	@l_ten = @new_ten;
 	@l_hundred = @new_hundred;
@@ -1253,7 +1284,7 @@ sub print_number($$$$$$$)
 #	$num	   number to construct
 #	$millia	   addition number of millia to add to the latin_root
 #
-# Prints the latin root name on which we can add llion or lliard to
+# Prints the Latin root name on which we can add llion or lliard to
 # form a name for 1000^($num+1), depending on American or European
 # name system.
 #
@@ -1267,9 +1298,9 @@ sub latin_root($$)
     my $d3;	# 3rd digit in a set of 3
     my $d2;	# 2nd digit in a set of 3
     my $d1;	# 1st digit in a set of 3
-    my $l3;	# latin name for 3rd digit in a set of 3
-    my $l2;	# latin name for 2nd digit in a set of 3
-    my $l1;	# latin name for 1st digit in a set of 3
+    my $l3;	# Latin name for 3rd digit in a set of 3
+    my $l2;	# Latin name for 2nd digit in a set of 3
+    my $l1;	# Latin name for 1st digit in a set of 3
     my $len;	# number of sets of 3 including the final (perhaps partial) 3
     my $millia = Math::BigInt->new($millia_arg);
     my $millia_cnt;		# number of millia's to print
@@ -1521,7 +1552,7 @@ sub european_kilo($)
 }
 
 
-# american_latin_root - print a latin root according to american ruleset
+# american_latin_root - print a Latin root according to american ruleset
 #
 # given:
 #	$kilo_power			# power of 1000 to process
@@ -1541,7 +1572,7 @@ sub american_latin_root($$)
 }
 
 
-# european_latin_root - print a latin root according to american ruleset
+# european_latin_root - print a Latin root according to american ruleset
 #
 # given:
 #	$kilo_power			# power of 1000 to process
@@ -1625,7 +1656,7 @@ sub power_of_ten($$$)
     my $biasmod3;			# bias mod 3
     my $biasmillia;			# int(bias/3)
     my $bias_big;			# approx power of 10 ($bias+$big)
-    my $latin_root_func;		# latin root printing function
+    my $latin_root_func;		# Latin root printing function
     my $bias = Math::BigInt->new($bias_arg);	# power of 10 bias
     my $i;
 
@@ -1761,7 +1792,7 @@ sub print_name($$$$$)
     my $cnt3;		# current set of 3 index (or partial of highest)
     my $set3;		# set of 3 digits
     my $indx;		# index into integer
-    my $kilo_function;	# reference to a function to print the kilo Noam
+    my $kilo_function;	# reference to a function to print the kilo name
     my $point_name;	# the same of the point separator
     my $i;
 
@@ -1856,7 +1887,7 @@ sub print_name($$$$$)
 	$kilo_function->($cnt3);
     }
 
-    # process all of the the remaining full sets of 3 (if any)
+    # process all of the remaining full sets of 3 (if any)
     #
     while (--$cnt3 >= 0) {
 	$set3 = substr($intstr, $indx, 3);
@@ -2058,18 +2089,18 @@ sub cgi_form()
     print $cgi->p, "\n";
     print "See the ", "\n";
     print $cgi->a({'HREF' =>
-	  	  "http://www.isthe.com/chongo/tech/math/number/example.html"},
+		  "http://www.isthe.com/chongo/tech/math/number/example.html"},
 		  "example / help");
     print " page for an explanation of the options below.\n";
     print $cgi->br, "\n";
     print "See also the ", "\n";
     print $cgi->a({'HREF' =>
-	  	   "http://www.isthe.com/chongo/tech/math/number/number.html"},
+		   "http://www.isthe.com/chongo/tech/math/number/number.html"},
 		  "English name of a number home page"), "\n";
     print "as well as the\n";
     print $cgi->br, "\n";
     print $cgi->a({'HREF' =>
-	  	   "http://www.isthe.com/chongo/tech/math/number/howhigh.html"},
+		   "http://www.isthe.com/chongo/tech/math/number/howhigh.html"},
 		  "How high can you count?"), "\n";
     print "page.\n";
     print $cgi->p, "\n";
