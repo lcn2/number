@@ -93,8 +93,6 @@
 #	Landon Curt Noll
 #	http://www.isthe.com/chongo/index.html
 #
-# Send EMail to: number-mail at asthe dot com
-#
 # chongo (Share and enjoy! :-) - chongo was here) /\../\
 #
 ####
@@ -105,10 +103,8 @@
 # This code uses the CGI.pm perl module, which is no longer actively
 # maintained.  If you want to help convert this code away from using
 # the CGI.pm perl module and instead using a CGI-like module that is
-# actucally maintained AND is part of core perl, please convert this
-# code and send it to:
-#
-# 	number-mail at asthe dot com
+# actucally maintained AND is part of core perl, please submit a
+# pull request with such a change.
 #
 ####
 
@@ -200,10 +196,7 @@
 # The original code only described just the "American" and "European"
 # systems. We don't have the time, or the energy to codify the many
 # English variations.  If you wish extend this code to describes a
-# favorite variation, then you are welcome to send us a patch in
-# "diff –u" (unified context) form to:
-#
-#     number-mail at asthe dot com
+# favorite variation, then you are welcome to submit a pull request.
 #
 # To invoke your variation, please use:
 #
@@ -226,7 +219,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '$Revision: 3.10 $';
+my $version = '$Revision: 3.10.1 $';
 
 # CGI / HTML variables
 #
@@ -270,11 +263,11 @@ my $warn = $^W;
 # very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
-my $big_input = 2048;		# too many input digits for the web
-my $big_latin_power = 10000;	# 1000^big_latin_power is limit for the web
-my $big_decimal = 100000;	# don't expand >$big_decimal digits on the web
+my $big_input = 20480;		# too many input digits for the web
+my $big_latin_power = 100000;	# 1000^big_latin_power is limit for the web
+my $big_decimal = 1000000;	# don't expand >$big_decimal digits on the web
 my $big_digits = $big_input;	# too many digits to produce a name for the web
-my $big_timeout = 10;		# max time to do anything
+my $big_timeout = 100;		# max time to do anything
 
 # For DOS (Denial Of Service) protection prevent file uploads and
 # really big "POSTS"
@@ -289,7 +282,7 @@ $CGI::DISABLE_UPLOADS = 1;		# no uploads
 # This value must be able to be be represented as an integer (say < 2^31).
 # In practice this should be even smaller.
 #
-my $big_bias = 1000;		# a big bias (should be < 2^31).
+my $big_bias = 10000;		# a big bias (should be < 2^31).
 
 # misc BigInt
 #
@@ -438,7 +431,6 @@ my $help = qq{Usage:
 
     You are using $version.
 
-    chongo <number-mail at asthe dot com> was here /\\../\\
     http://www.isthe.com/chongo/index.html
 };
 
