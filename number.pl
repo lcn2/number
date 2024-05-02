@@ -1,4 +1,4 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 #
 # number - print the English name of a number of any size
 #
@@ -249,7 +249,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '3.10.2 2024-05-02';
+my $version = '3.10.3 2024-05-02';
 
 # CGI / HTML variables
 #
