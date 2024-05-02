@@ -2,7 +2,7 @@
 #
 # number - print the English name of a number of any size
 #
-# Copyright (c) 1999-2014,2023 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1999-2014,2023,2024 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -47,9 +47,9 @@ number: number.pl
 	${CP} number.pl number
 	${CHMOD} 0555 number
 
-number.tgz: number.pl number.cgi number README.txt
+number.tgz: number.pl number.cgi number README.md
 	${RM} -f number.tgz
-	${TAR} -zcvf number.tgz number number.cgi README.txt
+	${TAR} -zcvf number.tgz number number.cgi README.md
 	${CHMOD} 0444 number.tgz
 
 install: all
