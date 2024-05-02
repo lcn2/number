@@ -28,10 +28,7 @@ When number is run with a .cgi filename extension, it runs as this CGI script.
 
 ## Number demo
 
-The number demo (run as a CGI script) is found at:
-
-
-    [http://www.isthe.com/cgi-bin/chongo/number.cgi](http://www.isthe.com/cgi-bin/chongo/number.cgi)
+The number demo (run as a CGI script) may be run from: [http://www.isthe.com/cgi-bin/chongo/number.cgi](http://www.isthe.com/cgi-bin/chongo/number.cgi)
 
 **NOTE**: The CGI script limits post to ~20480 characters. The
 command line interface does not have this size limitation.
@@ -41,7 +38,7 @@ command line interface does not have this size limitation.
 
 The GitHub repo for number is: [https://github.com/lcn2/number](https://github.com/lcn2/number)
 
-For more information see: [http://www.isthe.com/number.html](http://www.isthe.com/number.html)
+For more information see: [http://www.isthe.com/chongo/tech/math/number/number.html](http://www.isthe.com/chongo/tech/math/number/number.html)
 
 as well as: [http://www.isthe.com/chongo/tech/math/number/example.html](http://www.isthe.com/chongo/tech/math/number/example.html)
 
