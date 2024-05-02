@@ -39,17 +39,11 @@ command line interface does not have this size limitation.
 
 ## Official GitHub repo
 
-The GitHub repo for number is:
+The GitHub repo for number is: [https://github.com/lcn2/number](https://github.com/lcn2/number)
 
-    [https://github.com/lcn2/number](https://github.com/lcn2/number)
+For more information see: [http://www.isthe.com/number.html](http://www.isthe.com/number.html)
 
-For more information see:
-
-    [http://www.isthe.com/number.html](http://www.isthe.com/number.html)
-
-as well as:
-
-    [http://www.isthe.com/chongo/tech/math/number/example.html](http://www.isthe.com/chongo/tech/math/number/example.html)
+as well as: [http://www.isthe.com/chongo/tech/math/number/example.html](http://www.isthe.com/chongo/tech/math/number/example.html)
 
 ## IMPORTANT NOTE ABOUT CGI
 
@@ -67,9 +61,7 @@ The cgi script uses the perl CGI.pm module.  While it is no longer part of the p
     cpanm CGI
 ```
 
-For info on cpanm see:
-
-    [http://search.cpan.org/perldoc?cpanm](http://search.cpan.org/perldoc?cpanm)
+For info on cpanm see: [http://search.cpan.org/perldoc?cpanm](http://search.cpan.org/perldoc?cpanm)
 
 NOTE: RHEL (and systems that use yum) users may install cpanm via:
 
