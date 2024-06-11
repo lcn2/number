@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 #
 # number - print the English name of a number of any size
 #
@@ -249,7 +249,7 @@ use vars qw($opt_p $opt_l $opt_d $opt_m $opt_c $opt_o $opt_i
 use Getopt::Long;
 
 # version
-my $version = '3.10.3 2024-05-02';
+my $version = '3.10.4 2024-06-11';
 
 # CGI / HTML variables
 #
@@ -275,7 +275,8 @@ my $cgi = 0;		# CGI object, if invoked as a CGI script
 my $preblock = 0;	# 1 ==> we have output <BLOCKQUOTE><PRE>
 if ($0 =~ /\.cgi$/) {
     $html = 1;
-    use CGI qw(:standard :cgi-lib use_named_parameters -debug);
+    use lib "/usr/local/perl/perl5/lib/perl5";
+    use CGI qw(:standard :cgi-lib -debug);
 }
 
 # GetOptions argument
@@ -535,7 +536,6 @@ MAIN:
 	    print "Error: ", cgi_error(), "\n";
 	    exit(1);
 	}
-	$cgi->use_named_parameters(1);
 
 	# print CGI form
 	#
