@@ -28,14 +28,16 @@ TAR= tar
 RM= rm
 CP= cp
 CHMOD= chmod
+PREFIX= /usr/local
 
 # locations
-DESTBIN= /usr/local/bin
+DESTDIR= ${PREFIX}/bin
 
 # what to build
 TARGETS= number.cgi number number.tgz
 
 all: ${TARGETS}
+	@:
 
 number.cgi: number.pl
 	${RM} -f number.cgi
@@ -53,7 +55,11 @@ number.tgz: number.pl number.cgi number README.md
 	${CHMOD} 0444 number.tgz
 
 install: all
-	${INSTALL} -m 0555 number ${DESTBIN}
+	${INSTALL} -d -m 0775 ${DESTDIR}
+	${INSTALL} -m 0555 number ${DESTDIR}
+
+uninstall:
+	${RM} -f ${DESTDIR}/number
 
 clean:
 
