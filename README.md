@@ -74,3 +74,8 @@ maintained.  If you want to help convert this code away from using
 the CGI.pm perl module and instead using a CGI-like module that is
 actively maintained AND is part of core perl, please submit a pull
 request with such a change.
+
+
+# Reporting Security Issues
+
+To report a security issue, please visit "[Reporting Security Issues](https://github.com/lcn2/number/security/policy)".
