@@ -2,7 +2,7 @@
 #
 # number - print the English name of a number of any size
 #
-# Copyright (c) 1999-2014,2023,2024 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1999-2006,2009,2011,2014,2016,2023-2025 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -21,54 +21,88 @@
 # USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
 # OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 # PERFORMANCE OF THIS SOFTWARE.
+#
+# chongo (Landon Curt Noll) /\oo/\
+#
+# http://www.isthe.com/chongo/index.html
+# https://github.com/lcn2
+#
+# Share and enjoy!  :-)
 
-SHELL= bash
-INSTALL= install
-TAR= tar
-RM= rm
-CP= cp
+
+#############
+# utilities #
+#############
+
+CC= cc
 CHMOD= chmod
+CP= cp
+ID= id
+INSTALL= install
+RM= rm
+SHELL= bash
+
+
+######################
+# target information #
+######################
+
+# V=@:  do not echo debug statements (quiet mode)
+# V=@   echo debug statements (debug / verbose mode)
+#
+V=@:
+#V=@
+
 PREFIX= /usr/local
-
-# locations
 DESTDIR= ${PREFIX}/bin
+DESTINC= ${PREFIX}/include
+DESTLIB= ${PREFIX}/lib
+MAN1DIR= ${PREFIX}/man/man1
+MAN8DIR= ${PREFIX}/man/man8
 
-# what to build
-TARGETS= number.cgi number number.tgz
+TARGETS= number.cgi number
+
+
+######################################
+# all - default rule - must be first #
+######################################
 
 all: ${TARGETS}
-	@:
+	${V} echo DEBUG =-= $@ start =-=
+	${V} echo DEBUG =-= $@ end =-=
 
-number.cgi: number.pl
-	${RM} -f number.cgi
-	${CP} number.pl number.cgi
-	${CHMOD} 0555 number.cgi
+number.cgi: number
+	${RM} -f $@
+	${CP} number $@
 
-number: number.pl
-	${RM} -f number
-	${CP} number.pl number
-	${CHMOD} 0555 number
 
-number.tgz: number.pl number.cgi number README.md
-	${RM} -f number.tgz
-	${TAR} -zcvf number.tgz number number.cgi README.md
-	${CHMOD} 0444 number.tgz
+#################################################
+# .PHONY list of rules that do not create files #
+#################################################
 
-install: all
-	${INSTALL} -d -m 0775 ${DESTDIR}
-	${INSTALL} -m 0555 number ${DESTDIR}
+.PHONY: all configure clean clobber install
 
-uninstall:
-	${RM} -f ${DESTDIR}/number
+
+###################################
+# standard Makefile utility rules #
+###################################
+
+configure:
+	${V} echo DEBUG =-= $@ start =-=
+	${V} echo DEBUG =-= $@ end =-=
 
 clean:
+	${V} echo DEBUG =-= $@ start =-=
+	${V} echo DEBUG =-= $@ end =-=
 
 clobber: clean
-	${RM} -f ${TARGETS}
+	${V} echo DEBUG =-= $@ start =-=
+	${RM} -f number.cgi
+	${V} echo DEBUG =-= $@ end =-=
 
-# help
-#
-help:
-	@echo make all
-	@echo make install
-	@echo make clobber
+install: all
+	${V} echo DEBUG =-= $@ start =-=
+	@if [[ $$(${ID} -u) != 0 ]]; then echo "ERROR: must be root to make $@" 1>&2; exit 2; fi
+	${INSTALL} -d -m 0755 ${DESTDIR}
+	${INSTALL} -m 0555 ${TARGETS} ${DESTDIR}
+	${V} echo DEBUG =-= $@ end =-=
