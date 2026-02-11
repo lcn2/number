@@ -1,4 +1,3 @@
-#!/usr/bin/env make
 #
 # number - print the English name of a number of any size
 #
