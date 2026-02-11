@@ -1,4 +1,4 @@
-#!/usr/bin/env make
+#!/usr/bin/env -S make -f
 #
 # number - print the English name of a number of any size
 #
