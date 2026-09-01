@@ -252,7 +252,7 @@ use Getopt::Long;
 
 # version
 #
-my $version = '3.10.5 2025-07-21';
+my $version = '3.10.6 2026-08-31';
 
 # CGI / HTML variables
 #
@@ -293,7 +293,7 @@ my %optctl = (
 # Warning state
 my $warn = $^W;
 
-# We setup this arbitrary limit so that people to not enter
+# We setup this arbitrary limit so that people will not enter
 # very large numbers and drive that server crazy.  The algorithm
 # used has no limit so we pick an arbitrary limit.
 #
@@ -313,7 +313,7 @@ $CGI::DISABLE_UPLOADS = 1;		# no uploads
 # (due to conversion of a very large scientific notation number) in
 # a different fashion from a small bias.
 #
-# This value must be able to be be represented as an integer (say < 2^31).
+# This value must be able to be represented as an integer (say < 2^31).
 # In practice this should be even smaller.
 #
 my $big_bias = 10000;		# a big bias (should be < 2^31).
@@ -630,13 +630,13 @@ MAIN:
     # determine the Latin root naming system
     #
     if ($opt_i) {
-	# informal Latin room system (using du/do)
+	# informal Latin root system (using du/do)
 	@l_unit = @old_unit;
 	@l_ten = @old_ten;
 	@l_hundred = @old_hundred;
 	@l_special = @old_special;
     } else {
-	# formal Latin room system (using duo)
+	# formal Latin root system (using duo)
 	@l_unit = @new_unit;
 	@l_ten = @new_ten;
 	@l_hundred = @new_hundred;
@@ -707,7 +707,7 @@ MAIN:
 		"are ignored.");
 	}
 	if ($num !~ /^\Q$point\E?\d/o) {
-	    err("Scientific numbers must at least a digit before the e.");
+	    err("Scientific numbers must have at least a digit before the e.");
 	}
 	$num = exp_number($num, $point, \$bias);
 
@@ -1642,7 +1642,7 @@ sub european_latin_root($$)
 }
 
 
-# power_of_ten - just print name of a the power of 10
+# power_of_ten - just print name of the power of 10
 #
 # given:
 #	\$power		the power of 10 to name print
@@ -1720,13 +1720,12 @@ sub power_of_ten($$$)
 	if ($bias != 0) {
 	    if ($html) {
 		err("Scientific notation is not supported for powers\n" .
-		  "of 10 at this time. Try using <B>Latin powers</B> or enter" .
-		  " the\nnumber without scientific notation.");
+		  "of 10 at this time. Try using <B>Latin powers</B> or enter the\n" .
+		  "number without scientific notation.");
 	    } else {
-		err("Scientific notation is not supported for powers of" .
-		       "10\n" .
-		       "of 10 at this time.  Try using Latin powers or enter" .
-		       " the\nnumber without scientific notation.");
+		err("Scientific notation is not supported for powers of 10\n" .
+		  "at this time.  Try using Latin powers or enter the\n" .
+		  "number without scientific notation.");
 	    }
 	}
 
@@ -2084,7 +2083,15 @@ sub cgi_form()
 	"informal" => " informal use do and du "
     );
 
-    print $cgi->header, "\n";
+    print $cgi->header(
+	-type => 'text/html',
+	-charset => 'utf-8',
+	-x_content_type_options => 'nosniff',
+	-x_frame_options => 'DENY',
+	-x_xss_protection => '1; mode=block',
+	-content_security_policy => "default-src 'self' http://www.isthe.com https://www.isthe.com; style-src 'unsafe-inline' 'self';"
+    ), "\n";
+
     print $cgi->start_html(
 	  -title => 'The English name of a number',
 	  -bgcolor => '#98B8D8'), "\n";
@@ -2296,9 +2303,9 @@ sub big_err()
 	  " the output of this CGI program.",
 	  $cgi->p,
 	  "Even though there is no limit on the size of\n",
-	  "of number that the algorithm can name, we had to put some limit\n",
-	  "on the amount of output we will print.  Otherwise someone\n",
-	  "could enter a huge number such as causing the server to flood the\n",
+	  "a number that the algorithm can name, we had to put some limit\n",
+	  "on the amount of output we will print.  Otherwise someone could enter\n",
+	  "a huge number, such as 10^1000000, causing the server to flood the\n",
 	  "network with lots of data ... assuming we had the memory to form\n",
 	  "the print buffer in the first place!\n";
 
@@ -2365,7 +2372,7 @@ sub big_err()
 	  $cgi->b("number"),
 	  " reads a number from standard input, has no size limits",
 	  "and does not perform any CGI/HTML actions.",
-	  "</ol>\n",
+	  "</ul>\n",
 	  $cgi->p;
     trailer(1);
     exit(1);
@@ -2385,7 +2392,7 @@ sub err($)
     #
     if ($html == 0 || $cgi == 0) {
 	if ($html != 0) {
-	    print "Content-type: text/plain\n\n";
+	    print "Content-Type: text/plain; charset=utf-8\r\nX-Content-Type-Options: nosniff\r\n\r\n";
 	}
 	die $msg, "\n";
     }

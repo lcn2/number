@@ -1,7 +1,7 @@
 #
 # number - print the English name of a number of any size
 #
-# Copyright (c) 1999-2006,2009,2011,2014,2016,2023-2025 by Landon Curt Noll.  All Rights Reserved.
+# Copyright (c) 1999-2006,2009,2011,2014,2016,2023-2026 by Landon Curt Noll.  All Rights Reserved.
 #
 # Permission to use, copy, modify, and distribute this software and
 # its documentation for any purpose and without fee is hereby granted,
@@ -58,6 +58,9 @@ DESTINC= ${PREFIX}/include
 DESTLIB= ${PREFIX}/lib
 MAN1DIR= ${PREFIX}/man/man1
 MAN8DIR= ${PREFIX}/man/man8
+CGI_DIR= /var/www/isthe.com/cgi-bin/chongo
+CGI_USER= cgi
+CGI_GROUP= cgi
 
 TARGETS= number.cgi number
 
@@ -104,4 +107,12 @@ install: all
 	@if [[ $$(${ID} -u) != 0 ]]; then echo "ERROR: must be root to make $@" 1>&2; exit 2; fi
 	${INSTALL} -d -m 0755 ${DESTDIR}
 	${INSTALL} -m 0555 ${TARGETS} ${DESTDIR}
+	@-if [[ -d ${CGI_DIR} ]]; then \
+	    echo ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGI_DIR}; \
+	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGI_DIR}; \
+	    echo semanage fcontext -a -t httpd_sys_script_exec_t "${CGI_DIR}(/.*)?"; \
+	    semanage fcontext -a -t httpd_sys_script_exec_t "${CGI_DIR}(/.*)?"; \
+	    echo restorecon -R -v ${CGI_DIR}; \
+	    restorecon -R -v ${CGI_DIR}; \
+	fi
 	${V} echo DEBUG =-= $@ end =-=
