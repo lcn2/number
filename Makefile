@@ -61,6 +61,9 @@ MAN8DIR= ${PREFIX}/man/man8
 CGI_DIR= /var/www/isthe.com/cgi-bin/chongo
 CGI_USER= cgi
 CGI_GROUP= cgi
+HTML_USER= chongo
+HTML_GROUP= user
+WWW_DIR= /var/www/isthe.com/html/chongo/tech/math/number
 
 TARGETS= number.cgi number
 
@@ -107,6 +110,10 @@ install: all
 	@if [[ $$(${ID} -u) != 0 ]]; then echo "ERROR: must be root to make $@" 1>&2; exit 2; fi
 	${INSTALL} -d -m 0755 ${DESTDIR}
 	${INSTALL} -m 0555 ${TARGETS} ${DESTDIR}
+	@-if [[ -d ${WWW_DIR} ]]; then \
+	    echo ${INSTALL} -m 0444 -o ${HTML_USER} -g ${HTL_GROUP} number ${WWW_DIR}; \
+	    ${INSTALL} -m 0444 -o ${HTML_USER} -g ${HTML_GROUP} number ${WWW_DIR}; \
+	fi
 	@-if [[ -d ${CGI_DIR} ]]; then \
 	    echo ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGI_DIR}; \
 	    ${INSTALL} -m 0555 -o ${CGI_USER} -g ${CGI_GROUP} number.cgi ${CGI_DIR}; \
