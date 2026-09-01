@@ -18,10 +18,10 @@ Make all of the clones of number:
 When number is run without a .cgi filename extension, it runs as a
 command line tool taking a value from an argumment or from input:
 
-```
-$ /usr/local/bin/number -p -d 1234567
+```sh
+/usr/local/bin/number -p -d 1234567
 
-$ echo "12345678901234567890" | /usr/local/bin/number -l -r euro
+echo "12345678901234567890" | /usr/local/bin/number -l -r euro
 ```
 
 When number is run with a .cgi filename extension, it runs as this CGI script.
@@ -43,6 +43,7 @@ For more information see: [http://www.isthe.com/chongo/tech/math/number/number.h
 
 as well as: [http://www.isthe.com/chongo/tech/math/number/example.html](http://www.isthe.com/chongo/tech/math/number/example.html)
 
+
 ## IMPORTANT NOTE ABOUT CGI
 
 If you see an error of the form:
@@ -51,22 +52,52 @@ If you see an error of the form:
 
 You need to install the Perl CGI module.
 
-The cgi script uses the perl CGI.pm module.  While it is no longer part of the perl core, it still can installed via the command:
+On various Linux distributions, such as RHEL10, you may install Perl CGI via:
+
+```sh
+dnf install perl-CGI
+```
+
+In 2026 Aug 31 under RHEL10.2, `dnf info perl-CGI` produced:
+
 
 ```
-$ cpanm CGI
+Name         : perl-CGI
+Version      : 4.61
+Release      : 5.el10
+Architecture : noarch
+Size         : 552 k
+Source       : perl-CGI-4.61-5.el10.src.rpm
+Repository   : @System
+From repo    : rhel-10-for-x86_64-appstream-rpms
+Summary      : Handle Common Gateway Interface requests and responses
+URL          : https://metacpan.org/release/CGI
+License      : Artistic-2.0
+Description  : CGI.pm is a stable, complete and mature solution for processing and preparing
+             : HTTP requests and responses. Major features including processing form
+             : submissions, file uploads, reading and writing cookies, query string
+             : generation and manipulation, and processing and preparing HTTP headers. Some
+             : HTML generation utilities are included as well.
+             :
+             : CGI.pm performs very well in in a vanilla CGI.pm environment and also comes
+             : with built-in support for mod_perl and mod_perl2 as well as FastCGI.
+```
+
+The cgi script uses the perl CGI.pm module.  While it is no longer part of the perl core, it also can installed via the command:
+
+```sh
+cpanm CGI
 ```
 
 For info on cpanm see: [http://search.cpan.org/perldoc?cpanm](http://search.cpan.org/perldoc?cpanm)
 
-NOTE: RHEL (and systems that use yum) users may install cpanm via:
+NOTE: On Linux distributions that use dnf, you may install cpanm via:
 
 ```
 $ dnf install perl-App-cpanminus
 ```
 
-
-To use:
+## To use:
 
 ```
 /usr/local/bin/number [-p] [-l] [-d] [-m] [-c] [-o] [-i] [-r ruleset | -e] [-h] [[--] number]
